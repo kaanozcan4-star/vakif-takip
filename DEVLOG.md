@@ -12,7 +12,7 @@ Son güncelleme: 7 Eylül 2026
 3. ✅ `server.js` yerel geliştirme sunucusu kuruldu (`http://localhost:3000` aktif).
 4. ✅ Excel çek ve ödeme verileri (`03_excel_verileri.sql`) UTF-8 Türkçe desteğiyle veritabanına aktarıldı.
 5. ⏳ **Supabase Uyku Modu (Paused):** 7 günden fazla işlem yapılmadığı için Supabase projesi uykuya geçti. Panelden "Restore" edilmesi gerekiyor.
-6. ⏳ **GitHub:** Proje Git kontrolüne alınıp GitHub'a taşınıyor.
+6. ✅ **GitHub:** Proje Git kontrolüne alındı, SSH ile `https://github.com/kaanozcan4-star/vakif-takip` deposuna başarıyla yüklendi.
 
 ---
 
@@ -60,5 +60,5 @@ Son güncelleme: 7 Eylül 2026
 
 1. ⬜ **Supabase Projesini Uyandırmak:** Panel üzerinden `Restore project` butonuna basılması.
 2. ⬜ **Şifre Eşitleme:** Gerekirse SQL Editor üzerinden şifrenin güncellenmesi.
-3. 🔄 **Projeyi GitHub'a Taşımak:** Git reposu oluşturulup remote bağlantısı ile GitHub'a yüklenmesi.
+3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.
 4. ⬜ **Netlify Yayını:** Dosyaların `app.netlify.com/drop` veya GitHub entegrasyonuyla canlıya alınması.
