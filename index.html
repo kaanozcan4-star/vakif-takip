@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semerkand Kurtköy Vakfı — Takip Sistemi</title>
+<style>
+:root{
+  /* Semerkand marka turkuazı: #4BBFC2 */
+  --yesil:#0B4F55; --yesil-2:#0F6E77; --yesil-3:#4BBFC2;
+  --pirinc:#4BBFC2; --pirinc-ac:#A5E2E4;
+  --kagit:#F1F6F6; --kart:#FFFFFF;
+  --murekkep:#10201F; --soluk:#5E7375; --cizgi:#D3E1E2;
+  --kirmizi:#A32C1C; --mavi:#1B4B6B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Segoe UI",-apple-system,Roboto,Helvetica,sans-serif;
+  background:var(--kagit);color:var(--murekkep);
+  font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased;
+}
+button{font:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--cizgi);
+  border-radius:6px;background:#fff;color:var(--murekkep)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--yesil-3);outline-offset:-1px}
+.gizli{display:none !important}
+
+/* ---------- GİRİŞ ---------- */
+#giris{min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:linear-gradient(155deg,#4BBFC2 0%,#1E8A92 46%,#0B4F55 100%)}
+.giris-kutu{background:var(--kart);width:100%;max-width:380px;padding:34px 32px 32px;border-radius:16px;
+  box-shadow:0 22px 60px rgba(6,58,62,.38);border-top:5px solid #4BBFC2}
+.marka{text-align:center;margin-bottom:26px}
+.marka .amblem{height:74px;width:auto;margin:0 auto 14px;display:block}
+.yan-logo{height:34px;width:auto;display:block;margin-bottom:10px}
+.marka h1{font-size:17px;letter-spacing:-.01em}
+.marka p{font-size:12px;color:var(--soluk);margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
+.alan{margin-bottom:14px}
+.alan label{display:block;font-size:12px;font-weight:600;color:var(--soluk);margin-bottom:5px}
+.btn{background:var(--yesil);color:#fff;padding:11px 18px;border-radius:6px;font-weight:600;
+  font-size:14px;transition:background .15s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--yesil-2)}
+.btn.tam{width:100%;justify-content:center}
+.btn.ikincil{background:#fff;color:var(--murekkep);border:1px solid var(--cizgi)}
+.btn.ikincil:hover{background:#E4EFEF}
+.btn.tehlike{background:var(--kirmizi)}
+.btn.kucuk{padding:6px 11px;font-size:12.5px}
+.hata{background:#FBEAE7;color:var(--kirmizi);padding:10px 12px;border-radius:6px;
+  font-size:13px;margin-bottom:14px}
+
+/* ---------- DÜZEN ---------- */
+#uygulama{display:grid;grid-template-columns:246px 1fr;min-height:100vh}
+aside{background:var(--yesil);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.yan-bas{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,.12)}
+.yan-bas h2{font-size:14px;font-weight:700;line-height:1.35;margin-top:2px}
+.yan-bas span{font-size:10.5px;color:var(--pirinc-ac);letter-spacing:.14em;text-transform:uppercase}
+.menu{flex:1;overflow-y:auto;padding:12px 0}
+.menu-baslik{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.45);
+  padding:14px 18px 6px;font-weight:700}
+.menu button{display:block;width:100%;text-align:left;padding:9px 18px;color:rgba(255,255,255,.82);
+  font-size:13.5px;border-left:3px solid transparent}
+.menu button:hover{background:rgba(255,255,255,.07);color:#fff}
+.menu button.aktif{background:rgba(255,255,255,.12);color:#fff;border-left-color:var(--pirinc-ac);font-weight:600}
+.yan-alt{padding:14px 18px;border-top:1px solid rgba(255,255,255,.12);font-size:12.5px}
+.yan-alt .ad{font-weight:600}
+.yan-alt .rol{color:var(--pirinc-ac);font-size:11px;margin-top:2px}
+.yan-alt button{color:rgba(255,255,255,.6);font-size:12px;margin-top:9px;text-decoration:underline}
+
+main{padding:26px 30px 60px;overflow-x:auto}
+.ana-bas{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+  border-bottom:2px solid var(--murekkep);padding-bottom:12px;margin-bottom:20px;flex-wrap:wrap}
+.ana-bas h1{font-size:24px;letter-spacing:-.02em}
+.ana-bas p{font-size:12.5px;color:var(--soluk);margin-top:3px}
+.arac{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.arac input{width:210px}
+
+.ozet{display:flex;gap:1px;background:var(--cizgi);border:1px solid var(--cizgi);
+  border-radius:8px;overflow:hidden;margin-bottom:18px;flex-wrap:wrap}
+.ozet div{background:var(--kart);padding:11px 16px;flex:1;min-width:140px}
+.ozet .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--soluk);font-weight:700}
+.ozet .v{font-size:19px;font-weight:800;margin-top:2px;letter-spacing:-.02em}
+
+.tablo-kutu{background:var(--kart);border:1px solid var(--cizgi);border-radius:8px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+th{background:#E6F1F1;text-align:left;padding:10px 12px;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--soluk);font-weight:700;white-space:nowrap;
+  border-bottom:1px solid var(--cizgi);position:sticky;top:0}
+td{padding:10px 12px;border-bottom:1px solid #E8F1F1;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#F5FBFB}
+td.sag,th.sag{text-align:right;white-space:nowrap}
+.rozet{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.rozet.acik{background:#FBEAE7;color:var(--kirmizi)}
+.rozet.kismi{background:#FDF3DC;color:#8A6410}
+.rozet.kapali{background:#E4F1E9;color:var(--yesil-2)}
+.rozet.bekle{background:#FDF3DC;color:#8A6410}
+.rozet.onay{background:#E4F1E9;color:var(--yesil-2)}
+.rozet.red{background:#FBEAE7;color:var(--kirmizi)}
+.bos{padding:44px 20px;text-align:center;color:var(--soluk);font-size:13.5px}
+
+/* ---------- FORM PENCERESİ ---------- */
+.perde{position:fixed;inset:0;background:rgba(6,48,52,.58);display:grid;place-items:center;
+  padding:20px;z-index:50;overflow-y:auto}
+.pencere{background:var(--kart);width:100%;max-width:620px;border-radius:12px;
+  box-shadow:0 24px 60px rgba(0,0,0,.3);max-height:90vh;display:flex;flex-direction:column}
+.pencere-bas{padding:18px 22px;border-bottom:1px solid var(--cizgi);display:flex;
+  justify-content:space-between;align-items:center}
+.pencere-bas h3{font-size:16px}
+.pencere-govde{padding:20px 22px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.pencere-govde .genis{grid-column:1/-1}
+.pencere-alt{padding:15px 22px;border-top:1px solid var(--cizgi);display:flex;
+  justify-content:flex-end;gap:9px}
+.kapat{font-size:22px;color:var(--soluk);line-height:1}
+@media(max-width:760px){
+  #uygulama{grid-template-columns:1fr}
+  aside{position:static;height:auto}
+  .menu{max-height:190px}
+  main{padding:18px 16px 50px}
+  .pencere-govde{grid-template-columns:1fr}
+}
+.yukleniyor{padding:50px;text-align:center;color:var(--soluk);font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- ================= GİRİŞ ================= -->
+<div id="giris">
+  <div class="giris-kutu">
+    <div class="marka">
+      <img class="amblem" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG8AAACjCAYAAACE70CvAAAbYklEQVR42u2deXxcZbnHvydL06RJiymkC1aQthRLSwsUobhSK4j7BtcLLoBetwuu4AVBERRBqYBeFOQqbqhXvbixCLggCGihUForhW4gpfuWpEuaJs34x/N77xymM2femZwzOZPm/XzmU0ImM+ec3/tsv2d5gzfcez+DcAXA4cAY4CGgdzDeZA2DczUBHwVuAGYO0nsctOC9BHgnMBW4GmgdAq86VjPwaWC8fn418DFgxBB46V51wGnAW3P+/weAU4H6IfDSu6YCnwKG6+eMXgfr/x8+BF461yjggwLQARdes4FLgMYh8NJ3H2+WyqzJA5z7+TTg8wJ6CLyUrGOA84G2iPdkgFrgXOCcweDADAbwDgX+GziqgLos5I2eWu33X+3gjQeuBE7IA1ygVz71eTDwRf1dMARe5VcbcEEoLMh4/p173xHAdcBLq/U5VCt4I4BPAO9XWJALXOApgccBXwOOrUYJrEbwmoEvAZ8BWiKAWw3c7iGBL5PqPXwIvORWIBv3RYzuqo0Arh3jND8I3AzsLSBZ7u/nAFfJ+akaCayrMq/yIuDMArFcGLh5wA+BDuBi3ee7gGEFYsBAcWId8FlgSQk2dAi8IusoScZcjJ8sBNxWqdT/AXbo/60HLpdtfIckNtfByWhDvFGffyGwKO0Aph28GuAVwLcoTHs54DoE3LeA7pz3rJREHSgVWcgGBsApei4fBZYN2bzy1kjgvcC3PYDbAFwqiesu8HkrgfOAuz1s4Gv0vceleYOnEbxA9u1i4CvAlCLAPQF8HLgppCoLrScweuz/gJ4iAL5aAJ4CNKQRvNrDzzo7bZtpljzFMyV9UcA9glFddwF7PL9jK/A4MBY4skAc6L5jnGLAdcBTQN+Qzcu/GoCTFXMdWQQ0gL9gObpHy3AsVihOrJMTE0TYwCliYoYDP4tQy/ul5NVITX4MuAx4cRHgdgG/wLII/XHpO7UBGrGal4YINd4iR6cOWO6hnvcL8Jw3eRlwFtk8WyHgtgDfAK4A/hnD9+8AFmClgTMFZCEVOhzjQduApbqW/VZt1suufT5C2nJjuIuBH8e88zcC1+gzr1AgX8iJaQLOlqY4VyDuV95mHTBJD+zbHsBl5CWeA3w3IZXVieUEPwQ8G+HEODs4B/gt8HYGMKlbabXZALxOjMfpBdiSMHB7gN9hqZ8/Jezt7QUWA6uAwzAeNYi4tlbg5RKAlQNhBysJXqvc+kuAo8nPT4YfTp8k7TLg7xWiqjICYolU42FEE9UjgeOBQ4B/VNoOVkptjgOuBb4ATCBbkpcPtADYLZA/LYqqkvFVL9bf8F7g13lClFywm4EzgDuw0oq6wSR5E4EvY6x+bRFmBeBJ4L+wPoM9DNzaDvxeYEyRs1JMjZ4kgXhaf1/V4L1QFNc7PewbwN8kcbeRjs6eLoUS24BpCmWCIvHgbCyxuxbjXPdWI3itornepd1bDLi/Av8pldWTIuanC0sPLZF9ay0C4DAF/a/U3y5N6n6SsnnD5XafWeQ7whJ3FrCQdPbS7ZbXe5YcEyJCCRdOTMKovncn9ZyT+NBArMk5oc+P8hQXK/heTvrXfNnjJR6ODMABWB7xVSRQXpEEeC/AunImFgEuwEoWrgMepArKDqQV/oDV0Wz1CDsAXgR8VeFE6sGbC7wpxI5EqctbgJ+TIqbeY3UDv8Ky9pkiEuXuf5ZUbkOawRuFcX6NHpK0RDtyJ9W3eoAbPeLA8HobMZcXxg3eSWRLz6NsYhfwTeA5qnd1KRZd7ak+D5MHWp9G8Bq1u3wubhFWS5KhutdjwP0e0ueYmBOJkciOE7xDdXHFnJQ+4F6stCAJT7eSa5vuxZeUniaHLlXgBQpMD/R471axFkk4KS26jkpxtn2y3ds83z8W43lTBV6djHGTx3s3YjUkSajMLixjcVQFpW9DCeC1CMBUgdegOKbeE7xNCXqBy4APA6MryL7s8nzvMLIVcakBrxE4yDO221bCzZazFonZeBeVGd1RX0L8FsRpl+OUPN8d1U2CTLuk73aBN7MC4B3saevBUlw70wZeLdnZJz72MWmH4gGpqI+T7OiqOmyYga+K3g1sTmuQ7hOsjioB6P44EfdhBUIXkly5ehvWWdTk6YBtijNEigu8vhJUYVsFnIndIgE2Y8W5F8gOxi11p2EZA9+1nBjrXPoLXgOWt5pbggs8luKFPXFI+eNiPwKstP0i4mP2G2VTP+MpdYFs8SNYmWFsu6fcv5sutXSKwPC1La1Y88YfJSFJra1Y1uLNiq/OwyZAXI3l5crNbh+EDTL4JNFDe3LXeqy8vnsgJW8sVo53O1ZvcpzUYOCxAzNyrU8iRpoo4rv+iFVYO2l5s677cqzYtxTpD3Sv39Hft+XYcoqESPMprymm8Ad7jikOBNobsYaQaXkckfB7M0U+axfwEeBHJE9OH4qlbmbk/P8VwJ0YN7lStqibbBlGXSh+nSYNc2qOhsl4Prsdso93xXljPuDVaMedJ/CKNYP47sYFuqFnKuDpnoGV14/J87vtWFpnnRycXbrnRknXwVgVXGOJoLn73IvNevkCRt/F6jEVc0hOk3qcTOEq5yB0U4GnCj0Wqwe5gORLxe+Q9HyabCOJu74WrG16agnhji9wYIVL8+IGrpjNG4FVgF2PFZ1GAbcHG53xoxJv7n1YhVnSNFYH1hp2WwFAfF+lArdQ/kEiXG5NhCv8IZ4/mzIToRZulit+s+cOy4S+53ys5iVpANdLyn+tzZZUqOI+dxHwOYUsiax8Rbeu5vKSUDBdCLg+4HvaXWtlM46Tig08b7RVKu05ORFJ9iW0Y0W9I8h2wwYxguaeyZ+0mf9MgnWoueDVYKXp14QYiSgbd5scmY36uQcjXt9SgiQFcgzmyONbSrKFt53AwwLyGLI9CEEM0rYLm0pxEVaPmiQB/zzwAoyF/0qIiYhK7yyRGlqeh787RtJXys2PINuo8RTJVpXtEoAPauOMCUlhUILWcK8uxXAXYoVVm6nACnubLVht4TQP4LZjpW+LCqimW6Q+D/Q09M5LbZEHOhWbZLQgQRB7sezDUmxozhuw+soJWLFQ4LEBntUzuAu4R+FGxYqqwuDNwr+b5x5sIkM+esvp/HuAf/cMG3KdmNOx5v2fyoNNcgbKFmyozh+w6uZp2jwTsXqTZrITBjtl21cJ9KXYYIMtDMCMFhek1wE/UDDrI3WvwUjWqHUC8EuyBTfluNoZAXe9gNxaiWcisGr1XOpD17JHEpuRPRvQ0kUXKkwDXu8BHNh8r4Uen70AKwnflYeB8ZFCp0qPwJr978bI4OlY1j6pXGRGAHVLZbfr1SHb1hMCcECXy2q/Fb9819PA9z29wV5J8yHySBvLfJDOKZiFVYUtl626Dyt6fTYJ9qIaVp1Am+OhSjIyzCtK+PydwNcxUvvdRA8R8KGkhmGjraaKtlst9X2vJP1Zkk0zpQ68F5JtgIh6sFtl1Et9OGuxFMpYbLZY0A+Vk8kJ7luxbMEH5DQ8qsD4QW2yrbJTmTLsblWANwG/+vmn5V2V8wBWYtPYv4KlVob180Fm8tji0docJ2uDrdH3Lpd3+BzZAtmdssXdISfEOSB9eWxvasE7iOjsgns4SyVF5a6lWM/5+RghPSomaciXmhouV3+iwNwrsDrleHQKxE45I50hQDNySnr0c5d+1ylPux3Lgrjf9Q0keC0enltfTKzHaowHXYW1+7b1U436gInc/ha9Di7g2YZd/77Qv664aq8keruA34jlIlfo2TyDkd87KgVonV7F3Pi9Ckbj4By3yvVfjI0Wns2+ObYk3P9iNFdNPz9/mzbl47K9C+VAdSYloXXS+xkP8DbG+L2uzetJrArrNLIjE0kYyFKALWZKyONAzQo5UKtEnz2MjeBahfGefXGB1+7xYc4OxL3WYRzmXQpX3iJmpoXo+c8DvTIewI7W6zgxV2uwMSD3Y4VRy/ob1tRhWYBi6rCW5JKl3XJmnsJ4zKNFGrwBKx6qj9jxaXT/811PE5ZlmYxVsG3Gqti+i82g6SsXvLXSy81FdtOYhG+6T9dxn3bnl7CE6QwF5hOxMYqtehgNspU1+E1kSAugNXLUztEmvQNLaD+m+8+UAt46xXDjIzy/WrKZ5+4K3ewW0WAPSPpasFrPsXqNx0jvMQp3XoBxni0KFZoEbp2uvyZBVVkO5Yc24nswov83WI3pfF/H0Nm8+dhpVoW+rIZsN8zaAdi5PfJStyrwDnvKDXo1CrQRArBZYDYrpnT/ut+7f5v03036+8YCUh3ECHIuyTAeO7RqjlTpzXj0NNRJXf1eDEjU7pyOEcPrUqKKevUq1+iHUz/1IdBGCPSRAtt5kW1Ycrk19K97T1OEXc54AlmDVel9VeHThWKHMlHggZG7i+QsFFrjMHL5YSqTV6uEanYboBu/2tFAz2xYCOjRejYv1sOfIkfrIIz0rylD9b5FZuBzWMFUXofG1bDs1pvnREhfoAvcIuPax/65+qTGu+RgrBfL4rIbd+v1sIJ0FzbU418f486aOFb+yDP5nne4AGkLNqFnTAR4DYrDNmAFSPsrgFFkxg4B+g85W3dgs0QDLAkw3BNE1x9yggL8Z6LA2y6j/rKImM6Rvi/HCN5lVNfQt4FwtDrFJN0mEEeG4lcfAFv1/vnkVKWFwdsrZ2Qq0UWzgYz7bKmDNQJy7xBWRaXyabFJ/5CZGudBfgRkyfQHCM3dzi267cCY/zkUn6fcKB7vFXK5t2Lk7JAq9WOU/iq7OZ3Cx+CE4+xJMlVPFQIvI/CeBF4rbyooYljHYGfNvU46eptevUM4FSUhHhIYL6cwn+uEpQnrQL5VoOftVcjIe9ogb2dUEQBdOsWd8HGG/h0vl7q2THd5f1i92FE7fxcJ0lYEwPESrEWFwHNruezZlCIfms8jnUh24u0p8mKPxmplJkhaW7XbGqX363MYjf0J5NV6zaTwQJ4gFGfeDXRFlT90SUT/qWDxtRQf+J1L+7i0yNGyhd1Y+cBuff52/bxD/x0uNegI/dyp94TLD1ystScUcO+tUtB75MiMxBpVhlP4SPAZWC3rg8U6Y7uxSqx/w8ZWnJejmzMlcHyuVbixzBvsE0B7QhvAAdqhl7O3nWQH1G3L+f+7UxredAP/KwfmAgonCUYLwL/6jvLowCaaP4QdQX0Czz8colQyNp9K8GEdhunVXIJj0BOivzrkKKyXSVhDtqpsY0jSd2mT9A2ABF4tn2F2gfc0YhxzcylzWHZj0xMew1qx3ilbNprShgmUCmw5K5wJcIC3sO+g0gzZoqLNktQ1orVWiYRYKXArdcrKJiy/N12bNJNHdU4GRtWV8ZDXSbz/IA/pdIUJ43Ie3EDanlK+26nytpyAuksSuEoa53aMr6zENPr75IW+tMDvJwCjyz1LKKObWIElEe/UjnUpktqQ5xjrjMkKLaeiR2AV5bOxdrUTpILX41e41R/7NxWrfwkKeJ33xHUQ1GbtzlsxZn0Zzy9scvFekOdVDcvl/iZig3SOkfO0iWQGv/Yqppubhz5z1/LnOA/q65Mz8CesBsVxd4fItX2JGIJDFMs0Ubz+ZCDsZbHvaMba4Y6XxrlR6rQ35me5Wva4Kc+11AGtSZ2y6HblJrEHvyM7zvdAjGidpJ18GNaROlYq12W0a0qQikoCmwnFsO+RSr0cqz+J0zttj3CSakr1Nvtzsy5j3aWLWiGj7C6kgWzNySi9XkC2tqSBbLmC+/1osiUKB4TeOyxHTScBZrhbaRJ26vThWCX4ppi+J1NkMwQDeU56WEV06bXJU9Jc7UmDABspsN2ssAl6vUi2o438PRmZmKSwERuEMFZx2vIYPnsEhdNFGaA7DeD1R5K7yZYihMFtEMXkJPRQeW/Hij+ckEcy+9szWI8dEtwshqQ/5yS5HN7wAr/rATZVI3g+D3O3Xu0YN/sYdmyaKx4+ETv36LWh+C6IAcRhWO9FgE2R6ijzsxq02QpRiZ3AmsEIXtTDdSTDrcBv5fmeJPd/llRsbT+ZogDjgjdg7WzlVNqNUYxXW+A6ngP+uT+Bl7t65DitxEaOzJAknoJNx6gvE0QH4PuwoqEbKX3gwfHkPxPCkdWPAxvSAl4Qcj6Ga8f1SPXtJFle0WW178VKE36I9RC8X6FMOeo0I3v7ET3oe0v422asj2F0ge/cgVGT7QMFngsPDpV6mK3dPlYA1soh2YaRxI8rtPi72Jwk5qBkyB6NvVSq9XzZsBbK6+CdjM2OeQS/ot46rOz95Ih49hGsRazPd8Z0XKtOu/nVUk/HCzCfgHw3Vu/xR6wW8jE5BEkyLMOxlqxz5eSUag/dINlPKRbsLeKkvAkbUnQA+YcmbMbmw90JZJI85D53jdcXXySXegb+iV2X/h8rwF+DVW9vUpiQVN6tVxvmbwLO2cKgxA07DStd2BTxnrnAFYpN893/Diyn+jO3CSoBnptedA12NNqh9G+UR43syTHYaSIdWH97UhLYp4d+n2zj8RQv1cu9/1Fy7+8vsNFepeczLQ+DE0jrfFPv+X/nJ2nw6uSGX49VYvfHDc/3UNzslTrZwySnH+2R7W3XZmzGvygLqcL7yPb2B/qMtwmYyXmAQ2DdDFxJziGLSYI3HMu2fw2/CUvlAlivjdEoCdyeIIB75cx06TuHlXCdzVLBbujeS7BTxj5H9iifXODWAdfpGe4z0CEp8OqBd2Aj6Sf0Ezif/F9tSOXMJ1QSnpAEPqH7CWuTYmuYwp5HsfMpLpXUteTEh86rXQBcjPXptxdSa0msmdiQnPFlAheU8DvHnDRrJy/HakCSXJ1YE+R0bVLfMGKu1OMM9i2jDN/XL7BDNCKHxCYB3gFYieCRZbjVzkFw46U2yknYqR0+AssHuh70ETneahM2iGA5VrKYZBjRJQfiKPznabsUFnmA24tVQ9+A5QbbfRyKuNfrxVD47sbwjnsKm9r3kGzLegG3J6R6Rkmipyv2OjGHCRmPnQfxHxgpneRajJ3T8AmixzuH1WI+aduMjUr+PpaV99p0cQfpbQqgZ3lKnbv4rbrwW7Bqre0esVsdlsebjFWwvZdsqfhujBS+LmEPNJDd+4lse6laJqMYch5WPlIS6VAT8428rgzgVmLpkwvkiXV4Bt29An2+aKwzRB1l5OmeLolMcjmSeIGHrc6973aB9laMGG8vVc3HCd5IeU+l7LwV4v5+00+WxJ2V937g5xiRfaTopqT5250YUex73z1Yk+QHpB3KnukWJ3gvJntGnc8O6sCOvLmLeLIGfQrUzxeP2IcNpGurgPQ9WkJ4Ml+b7Ff0s4A3TvAOx+/oUSd1t8jYx53ueU4c4E+xbPSbSH6txv+krrVYXWu/+di4wKvDstK+R1qvk5FPqltno+zJQowMPyBh8HbgfwpzbPWdcYLXiv9kwCfkVSa5nhStdAiFR3PFtUo5anxn2sCrJVsB7avadlXggd6Jne1wKuX3BfpuXl+tszlt4JVq4HdQmdEfXcBV+q7DEvyeZrJnDUbZ+r44iYO4wOvFfzC2Y9hrK7RZOmRf2xIMGyZSuJc8vLbHaS7iAq8Ho7J83eUJ7NtAkeRajNXCJAFeDZag9dmMrnEzVeD1aUf52rEpWN9bpVaX1FUSqSI3cM/XUduUNvCcd7c+J5YrtMZjBUiVXL0kU+syk+yoy6gT0HYrQN+eRvCewzICPg5LgLVHTaK61yiMmxzt8d41WLakJ43gdWO8ou/OmoKVxDVXMXgzFYbUUvzcwQelNkkjeEgt/MRDdbobPQMjs6ux7L4RSzr7ZC72KN7sSDN43dh5eU+WoHbOx9JI1TR0oEHAvd3D1oEN/f4LMWf2kwjSl2NJ0M2e0jcdS41MqxLgXK7ws0RXC7h7fxird4m93yIJ8HqxlP73pC6iqr6c8zIX+AZWSJtmCayTl/xZskfIRQG3BuuUTaQcIyl6bAtWuv0FsoU0UQDWYP0L38FqUtIK4CuxAxyPiFCXQcjO3YgNU8hUE3jIOF8lp+QBqY2giAo9GjsY6o34E72VWCOwAuLvyksuBlyP3nsDCU5MqkSvwip5oYFufDjRA0HHYCkc1/w40Ccxj8VqbC4nywpFAbcdG7v4RWLMIAwUeBmyE5KWYbUlBxYBcBQ2+W4kNle5cwCBuxRrkhzt4ZxskXNybdLAJa02cwFsVwx4hpiYTAFnxj2gZqwvbh7ZyutKrilYKcWHtZmKAbcRK6a6Bv+selWAF16PY5VT3w4FrYVK2Gvkln9PsWB9Ba5vOHZ23y1yoqLUZICR8b/FjpD5MRUcxFrJ5srw2ob1f28kW7gUpUYnCrx1WJN+UpPjG7Gal0sVfwZF7NtqkRJXkm0+YbCDhxyRxVhZ+xFkz+8rBOA4rH/dHfUS94MajZXJf4Z9T3TOB9xCrMz9p5VSk/mCzoFc3Vi771oF6a8ssNszIQn8uq7758RTyh5gJRKXAWd6eJO7sC6ei6QJBmwNpOSF1was4rlFarQh4kE3iZHpwRpT+lPIVINNk70CI8hrigC3Qg7U1bpmhsCz1Yn1Guxh32O3cx9kg2xgnVRvOQDWYx1NV0vi86V1nFOyFytpvxgb8dGRhgeWJvDAipgWYA0kc4p4l42ygU3YkJpSqtEapCKvlaQHBYBDqvkmLPuxmMoNCk9lqFBs7VQYcY48y0LEtusG+phAGIsfJzoCG1RzFdmh5oWA24D1jF8iu5yqAzfSmgTtxeaNdMsDnFHEkfmQNuKVWHVWoYfchp0LcR7Zvop8wPVhlN5XsUaY3Wl8SGnOYPdhBwbukl2aFgFgDdZciSQlX4XWOP3ubLJzLPNNGdqLNcBcgR24lNoj5dJefuDO2Nmg0GBSBICNUofditXCTEergPsgxWfB/Bg7KXldyp9NKm1evrUQG4H4N57f251PhZ6LZQBcRdcoLHl6dsijzKcq26UmP1kNwKXR24xaa7D0kivYDSI25Ayp22ewCrXzJJmFYrh1cmCuTUsY4MUuVHjqXxxq/kQs4z65CBuyQU7HyUVsXAfZYTWd1fQwaqiu1YsNXzsLOzyXCBU6Bhu3ODwC5C7ZwpuqDbhqBM+th2SbnvJ8fz4bt0Xx201pCrz3B/DACO2rZK+CCMByVaWbXfktqd+qPee9msHbjR0FN6+IB5pv/VLgdVbx/Vc1eA7AG+QlRlWnhW3jYwrA11f5vVc9eM7puAJLihYD8BnZymWD4L4HBXhgWYh5WCdOPg/U2bl5WA0pQ+Clay3BiOnNOQC6f+/CKLa+IfDStzJYXu/L7Nu+vBqrYN48iO53UIEH2TLzH0jCnNTdKnWZGQIv3cuNEJ6vn5/FGj52DLYbHYzggRHY1yuA/9pg8S5z12A9xasPO9d8MzZOMTMYb/Jf3Ow6XPJIl3wAAAAASUVORK5CYII=" alt="Semerkand">
+      <h1>Semerkand Kurtköy Vakfı</h1>
+      <p>Takip Sistemi</p>
+    </div>
+    <div id="giris-hata" class="hata gizli"></div>
+    <div class="alan">
+      <label>E-posta</label>
+      <input type="email" id="eposta" autocomplete="username">
+    </div>
+    <div class="alan">
+      <label>Şifre</label>
+      <input type="password" id="sifre" autocomplete="current-password">
+    </div>
+    <div class="alan gizli" id="ad-alani">
+      <label>Ad Soyad</label>
+      <input type="text" id="kurulum-ad" placeholder="Erol Kaan">
+    </div>
+    <button class="btn tam" id="giris-btn">Giriş Yap</button>
+    <div id="kurulum-notu" class="gizli" style="margin-top:14px;padding:12px;
+      background:#E8F6F6;border-radius:8px;font-size:12.5px;color:#0B4F55;line-height:1.5">
+      <b>İlk kurulum</b><br>Sistemde henüz kullanıcı yok. Buraya yazacağın e-posta ve
+      şifre <b>Müdür</b> hesabın olacak. Diğer kullanıcıları sonra site içinden ekleyeceksin.
+    </div>
+  </div>
+</div>
+
+<!-- ================= UYGULAMA ================= -->
+<div id="uygulama" class="gizli">
+  <aside>
+    <div class="yan-bas">
+      <img class="yan-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaYAAADcCAYAAAA7vwUQAAA5I0lEQVR42u2dd5hcZdmH79nsZnfTSSCEUBJKCKFDggKKgoAUKwqKiIJgRbGCIoqiKBZAUQQRFQVR+fxQ/BRQBAQUkF6kl9BJAqTX3ezuzPfH85xr3p1MOTNzzsxs9ndf11zJTiazp7zn/b1PeZ8nk8vlEELEJgNsC2wM3Ab065IIkSxtugRCVMUo4ATgp8CuuhxCSJiEaDazgMOB7YGzgIm6JEJImIRoFmOALwBT/ed9gU8Do3VphJAwCdFo2oEjgHcWvP9h4BCgQ5dICAmTEI1ke+DzQJf/nPPXpv7+trpEQkiYhGgU44GPujhFohSyF/BVoFuXSggJkxCNeEbejrnx2oqIUvTzEcDXXMSEEBImIVJjd+AkYHKZz+SAEcCngONQMoQQEiYhUmI6cB6wc4F1VIooa+8QPVtCSJiESJqpwHeAPYuIUsZfhVYTWDLEGf7/MrqMQkiYhEiCycDJ5FPD49btij63HXAu8Bo9Y0JImISol9HAZ4HjsdTwQlHKxLSc9gDOAWbLchJCwiRErYwBvgV8ERhbRpReAK6KYTm9DnMHao+TEBImIaoig8WUzsBKDI0oI0pLsRp5HwUuBgZKWETR/38T8F0skUKWkxAxaNclEILpwJeB91N8r1IoSmcDlwLLgK/4M3QkMJLie5wy2D6oduBU4CHix6yEGJ4rRfVjEsOcnd2iOQCrd1dKlBZjbr6fAyuDf98aOBN4t1talPmOa4FTgAckTkJImIQopA3YB7iA0qWGIkFZBnzDP9tb5Lu2Bi7C3HaUEJ3ou27A+jk9oVsgROmHU4jhxjjgg8DPYojSy8DX3VLqLfF9c4ET3SKqFHPa33/vHsiVLoQsJqHxDkwDPgEcS77MUClRegT4JvAXYE2M798Gc/e9i+JuwfC77wNOA64vI3hCSJiEWM+9A7OB04EDyfdPKiVKd2HxoH8B/VX8nm2w7L73Bt9V6nc8jhV+/VOVv0MICZMQQ5xO4M3YnqIdKogFwL+xHkv3UFuSwubAD7CEiEwFy2m+C+D/yHISQsIkhoeVNA34ELbvaOMKorQa+DPmvnuC+jLnpmA9mj5I8c264e9dBvwQi2PNRxl7QsKkZ0Cst6K0j1s+B2P7jMqJ0iIs6+4CYEFCxzAZy8D7DDAhhiheDnwPZewJCZOESax3dGCbZb8GbFlCEEJRWIxtfv0tg/coJcE4t9a+TfFNuOGx5IAbsb5Oj+o2CgmTEEOfdqyKw2dcDEZWEKWcC8CpwNWkl4DQCbwP2wu1RQyhfAr4EpZ+vkq3VUiYhBiaRAkOJ2IbXUdUsE7W+sR/JnAH6cd12oC3uQjuQeWkiJeA84FfY3EnISRMQgwhJrogHY9lxFFBlLJYosEP3DrJNtCiew2WXLF/jONcie2h+iaWWi6EhEmIIcAmWK27D8aY6AF6fKL/Mc1zk011a+idMY85qixxHdrvJCRMQrQ0W2Nxm/dQesNsOME/hu1luqyBVlI5K+9UrALFpBjHPg/4kR/7PN16IWESovXYDGtBUa78Tzix346VC2qlEkATgaOBkyjvgozOYSUWFzsXq0yhDblCwiREC03o51K6f1LhhP4f4JPAg7SeK6wL2A9zLW4TQ5xymGvvHOA3KGtPrIeourgYanQBHwtEiRiW0rFY0dRWjM/0AH/zY3y44NhDcuQbD26DuSSP1jMsJExCNNnCx6o5HBeM3XIm/3+xLrNPDoFzuwPbu/RQGXEKz3cCFqN6I2rZLiRMQjSNDYAPY0kP5UQpg7VBPxe4laFRe64fi3+dgVWiKEd0PlsA38fqAQohYRKiCRyAbVLNUDmudBnwB4ZWgkAvcCWWpJGrYAlF5z8HcwN2angICZMQjWU8VkOuO4YF9JBbEkMxMaAPuBCrcg7x3HSHAdtqiAgJkxCNZT9gzwqfyWCdZs8HXhzC57oG+CnwQoXPRQK9FfAG8nu5hJAwCZEy3W4VxJl4H8D2+gz1fRD3Yt1zK1lNOWAMsDcwWkNFSJiEaAzTfeKFyjXwbiSdoqeNznxb4ucStw3HjlhyiBASJiFSJgPMAjaM8dnFwN2kk/Aw1o+jUc9MFouVLYn5+SlY3UAhJExCpEw7FtgfFeOzr2DVwtNw460BdgN2buC5v1yFMI11cRJCwiREynRi+3TixJdeAV5N6Tj6sJbnHydfdDVterCW63EYiXXLFULCJETKdAMbEW/v0pIqJvJaeACruHAkjcmA6yD+/qQMqgAhJExCNMxiimsJ9AIDKR5LH3CVC9OuDTj3TYkXWwPryKuCrkLCJEQDGIEVbo1DewPG9C2Y2+wzWJXztGgHdie+27AHWKjhIiRMQrQGkYtvfBUiVisvAzdjfaBOIb1SQJOBt2JJH3GSOV4lnTR5ISRMQhSQJb57bjLpJyb0YBt4F2IN/k7G4k5JW0tHYJXD4/IksEjDRUiYhEiPTqzv0AHET4OegpXnSTMJIAfcj1VlyABfBL5MchW+u7EY1hdjWksZLPZ1F7Bcw0asD7TrEogWHJM7Ya6yg1xo4sZyJgKzgRvcskmLxVj18rdj+4dOBLYDzsL6KvXV+L0bAccDn3PrLy4LgH+jVutiPUGt1UUrMcUn+WOBqUUslYrjGbgJOIr04y0dWDv0jwfvLcOKr14EPEv8jb4ZrH3FV4FDyKeix7GWAK4APoL1oBJCwiREvWPQBemtwKexmm+lxChTYbLOYPuYPgH8hvQLuU7H2lPsUvD+U8A1WK27uVjsp5d8a/d28vuzdnTL8JACyzCuEK/E4lF/11ASEiYh6qcN2MOtpLdiWXWlBCnuhJ3B6uUd4VZL2hwF/ADYuMi/rcBaV8zHkiVW+zl3Y666TYHN/OdqBCk6zwHgHOB0rGSSEBImIeqg08Xjq8AMn7BzJSbgaMLOxJi8I6vqZ1jG3MqUz2M88CXgC9j+pvD4qknCqOZBjL73KuA40ivDJETTVqxCNJrRwMeAnwAzK4jSWuBSzDVXzcR9DPB+0i8dtAyLNf21hNjEfVUrSvcB35AoCQmTEPXT7aL0NUq77qIJeAC4GEvHvph47qpc8HtOAt7WAHFa4NbZn11I00pXj773AeA0LG1dCAmTEHXQBXwUOJX8RthSopQFfgWcAczD4kY3FkzQlcRpG+CbwFtIf2vEM1jyxi8x92GSRVUzwTW5ASuH9A/yyRRCrFcoxiQauQh6Lxb7GVtBlAD+gsVPwmoG7wB+79ZQ3Kw1sHYYpwK/Jd39TWCZdsdgcacNi4hlrVbSarcazwGeY+i3jhdCwiSaO86waty/xJrtlZuoM1jn1g9jm1VDJmIbWw+huuw1sAy5c1wYX055Ym8H9nRx2gerjl5tZmHEGsx190MsjqXsO7Heo8oPohGMxTbN7hhDlFYAF/pkXMhSF6Y93BqJIy5RNt9YF4rtgQsw12BabSL6sSrkjwL7Y67EOcDmwBgqu/hWA8/7Nfg75rabLytJyGISIjnehGXVTaVys78/Aidg7rdiTHHL531U3nBb6nc8i7kEfwM8jsVu0qINK/K6hQvz9sDWwCYuUiP8HJZjsbSnXdAexVx2i1I+PiEkTGJYWuWXYBtR41hL+2MFScuxJ/Ann9ypUZxyLko/cZFa3IjnzYVohF+XsPTQWre0clg2oh5MIWESIiV2xbLpJsSwln6AudsqZZu1Y9l9Z2EVuKsVp0KBugf4HXC9WykrZaUI0dzVrBBp0Qa8k3j9ip4Bfk28FOh+t8KmYeWMums4tij2FBVQ3RnraXQL1gjwXizOo2QDISRMYj1iAhZfqmS55LAg/1NVfPcq4EdYzOloSlePqCROESOBHbAY0BFYjbu73Nq720WqR7dUiPSRK0+kyc5YRtnGlHfjLcJcc1fWIC5bY1l2by4iNjU9E0XeW4S5+24CbnUBXYzFhXIJ/V4hhIRJNIC3AJdj2WflhOlu4INYJlotzAK+h7WPGJmgSBQTqR7gJaydxZNYFt2L2N6oJW7JrcbaXEQJDVEyQ7bAWtPDJ0QR5MoTabJRhTEWTfyPYqnStfIo8EmsNt4xlK/BVw3F2m90uZW2tVtpAy5Ey7GCrstdoJZj+66WB2KVw7rb9vnPa/zflmMZiUuxxIvo35SAISRMQiRIG7aptVI9xiyWtl3vZtcXsGrbT2PlhyZT/T6naoUKLPV7rL82LfL5wvTvbPBn1v9twC2xFS5qr2B7rZ7ya/MsVihW2YJCwiREAuOrUpWDASxFO4mCpIuB84D/Al8H9mLdHklJU6k3VIb6iiXnXKyexqqJ34O1vHjeLS1ZVkLCJEQVE2pvDEEYoHSVh1rIYpl0jwFHYhl2u1Jbl9g0RaucmBX+PNFfc7AagotcqB4A7gQe9J8XSqTE+oCSH0SaHIUVbu2idCXxNViSxI0p/P5OYCssZf0dWMWIsQmKSMOf1yLvrcaSMR4G/oW1xXgCpbYLCZMQRTkQKx00hvIdat+GpZWnRZsfw27Yht+3ANOp3EBwqIlV1q2mq3xBcLssKCFhEmIwO7jgTC0jTH3A8VTXOr3eiXwilmK+ix/j1n6ME7ESR51YbKqN8jGyVnt4wmNdDFyNNVu8F4tH6WEXEiYx7JmINfx7XYmJPOrK+j0so663CcfYgbn3NsCqSExxkdoE2xi8kf/bOP9cl4vXSCxGO4L6O0En+RAWCuk84P+wJol3oK63QsIkhjltWKHVz5eZgDPAtVi32nktctzt/ur0V7cL0mgXpzEuVGOwPVPRn9G/R3+O8r+P8v/fXYU1loSARd8/gKWe/xLrgrtIQ1NImMRw5mDMpdRWRpjmYe68a1k/3E1he4uOQJBGu6CNcyGLsu0mY40PJwZ/Rp8ZlZBQRSJ1JXAKVrVCD7+QMIlhySTgOizxoJQw5bC2E5+mMX2RWlXM2t2aikRsEuZS3BKY6a/pmHtxAoNdiHHbtWex7L3TgNtQcoSQMIlhOuF+Cfh2BatphU+WF2AJEWIwnVisaxNgO2xP015YAseoGgTqAbecrkdxJyFhEsOQWVgx153LCBNYrbiTgEslThXFZRTm8puNbSQ+mHyNwEoCFV3vp4CPYXvINBGIlmHE6aefrqsg0mYFliDwOkrvHYoKpL4eK4b6BM3J0hsq9GEp4I8BfwX+g8Wlpvs1rpRYEaXNT8ey9RbqkgoJkxhODADzsSZ8M8pMmhksUWAvLL7ykovUgC5hxev7DNZs8WHyLr9KG4gz5AvP3oJtdhai+S4BufJEg2gD9sHcdFv4e+XcegM+yV6O7cN5AsVC4l7nbbD2HyeQb2tfqVHjh/06a0IQEiYx7CbNg4BfYynSlSbM0Bq4Avhf4BFUBy4OXcBbsfbzU2MsBO4EDmH4ZkUKCZMY5nwA+FYFyymcNCNWYLGUG4C7sNYPS7FCpn0M7nskjAOBH2Kll8qJUw7b5HyJrqGQMInhSDdwGPBlYMcK4lRMpHK+sn8ea6L3tP99HuaWWsbgTrBR19iozflw2rvTARwKfBdLMy9nNV0FHIsqQwgJkximdGJ7cU7zVX1bTIEqZkllsQy+1Zibb41bV6tdoFYwuH35suDn5f6ZQiFbgyUD5AJByw3ha/0e4CLKtyB5AXgfcKuGp5AwieHMeOCLwIkM7pVUS7mdWsm6+KwNxC0Sq2X+WuKv5Vhjw1eD96L3e2jdFPcObJPzySWub8bP/WTgQlQRQkiYxDCnC9gfyyLbE9tfU4tApSFapci5ZdUbCNgiYAGW5v4S8CLwsgvZ8sCKW9ukiX8jLPNurxLClHOr6ot+vEI0BbVWF61AD3AN1jdoP+Bw4A3YXqZMnSKV9MorE/w50l9jsX1Dhb+3x8VooVtYL2GxsKex9Pe5LlyNqnLxKtafaSfWbd6Y83Oa4VashEnIYhLCacMqbO+OxUUOLjHpD4nnq8h7A1j8arUL1G1Y0sGdwKoGHNO2WFPG15Swmp70636/hqKQMAlRnFlYO/TD/O/dWDuJoShUpcRqLXAz8AssFX4J6bn6xmAZeieQd9+Fx7YYeD9WRUKIpiBXnmh1HgUex2IfuwCvxQqXzsQ26W5A6dI7rShYxayUkVhm4l5YS4pLscKqr6ZwDquxyuJrKN7raQzWxVcICZMQZchiiQX/9Ik7qgU3DdubMwvYyn/e0CfcWjrENkPYcgWicKiL7zVYdtydJFuKKYulhfcUEaaczwkTNeSEhEmI+PS7JfEq8CDwN7eYOl2UNsVqxW3tYrWFWwDjyXeSbYv5uzINFq0oAWESVh1jL+CbwG9J1rW3lNIJF20ukEJImISocSLv99can3CfwuI10STb6RNt1Kp8vFtco91i6CTfAj3690nk255PCD4bZeGNKCJauQTPKRLFbYCfYQkL55Gcay9XQegyGlpCwiREOmRdsNb4pB7HQhrhr04Xo3EuZJPdGtvcX1tgxVEnY+nibQkLVWQ9dWMdgKcAZ2FZc/V+92jKx+XUB0tImIRoQQusF9vLs6BAuDqxDcGRZTUd6zM1G9jVRavQosrVcTy4iHzQLb+TsY27tRL1YOoq8W99MUVcCAmTEC0iXD3+Wgo8h20KvtIn9Y2BvbHU9gPJt/bIJCBQI7EW6hmsHfqyGr+r04W0u8S/L8c2AgshYRJiiAtWDuvS+0fgL1iG4H5Yj6M5mNtvRB0CFbn23otVi/gGtfVO2hjYw4+l2HG86IIrhIRJiPWIPiwJYy7wJ2z/1YFYk8Qdycd3qhWoSJyOwdp9XIjFz6rhtZjLsZBos+39LnxCNA1VfhDr/Rgnn8jQ5ZZCH+aOW0Vj6tRl/HdPx6pYHI+ls1OjQEWlgz6GbcSNyxisE/BBFN/ouwKrCPE7VF1cSJiESIwoRXw65rLay62UKS5OI7DkhiVYQdX7sfTyB7Fiq/2kv7F2W+AkLGY0tgZximJWfwWOwqqbV6Id+DRwNsVLEYFtYD4ac0kKIWESok7a3QrZ1y2C17oYxdlM24OVPboBuBpLaFiWskB1AW8HPoUlTFQbf8pgNfY+j+11KlcdohN4G/BzbF9WMVFaiHWvvQa1VhcSJiHqZipwhL92Yd3KBbkY1geY++olrIDpxcDdJFsOqJiYzgQ+6aLQXYM4PY+VMXq4zO84EPg+xdvYZ9zi+jpwPtrDJCRMQtQ3frH9Q9/wybfWpIJCkcphyQtnYgVV0463jAGOc3GYWMU5RMf7XeBrFI+X7Qf8uIgoZQJr8Tys9NFKDSnRCrTpEoghSrtbCr/yP+sVpej/hg3zzgdOc7FIs0zPSswddxr5jLhqft9bsWK2oWCNwVLLf11GlNYAv8TiThIl0VIPtxBDjS7gXcC3sSSHegWpmEBlsGSJr2BxmbOAeSmeU69bZ51uvYyp4ji3AvbBWoRkXaSOxbL/JpYQpflYuvmFWOt3ISRMQtRIB1ZZ4SwstlSPKJUrxBqWA/qwWxdnpmxZrHQLZpwLYkeMc8u5gL4RuBZ4HfARbFNvV4GARX+/G/geFktbpSElWg3FmMRQYw8sMWHHGkWpGhdZaGWsxjLoftWAc+zG2p+/O+Y5Rp1nn8OSP9pKWEkAfwBOx7IQtVdJSJiEqJMJWCD/aNbdixNHjLLYJtIlmPtqkVsMI7CK2xsCG5Fvi5EpsDjmYXGbW0k/pXpvLD40I6YwlRPVAeAx4KdYb6elGkpCwiREMhyFxUTGUl3WGm4h3ATchsViFrgorfV/H4lVDJ8K7OTCsDeDKzQAXIe5ytKuJzcGy7T7LPFcepkSVtJCrNrDr7FuuHrghYRJiISYjG1+nVMwAVeaqBf7pHwZ8LRbTJVcWO1YnGcG8B6s5cSG/m89WHr6uf731J5NLF70O6yVRrXWYQ64Hcu4+yfpbxgWQsIkhtc4xVqNX1KlKM0FTsEKqWbr+N0HYBmAc/zn+/x4Hm6A1XQpluxRzXkvxao8nI0y7sQQRPuYxFBgXDA5x7UYngI+B/wf9QX5c1ipouOxxIE+YAesxE/aWa2rgOurOO8+4BYsi/AbEiUhYRIiPbbEss3iWA1gbquvYunQSVQPz2JFXk/CNsJmsfJHk1M+7xxwD/k4WCXucAG9EqWBCwmTEKmyLfmNonGspcuAP5N8S4sXgTOA32NdYN/WgHN/gfitzucBT6A0cCFhEiJV2rFusJ0xPz8fSxhIqxjpK1js5j6susKElM9/JZbWHod+DRchYRKiMcI0kXwtvEo8gmXfpcljwDkumK9L+XdlsX1IcZD7TkiYhGgAI7CSO3HH6otYlYa0xeIaLEvwEPLtKtIS5rjW4kINFyFhEqK1yGGur4EG/K41WLuJAayIalqMASZV+EzGxfI5DQEhYRIiffpdbOIE9KN2DyMadGzLsHjWZNJLHd+a/ObecqwgfRemEBImIbDMugXET5neHHP9NYr/Yl1k21N6Pl8bU2hf8uMQQsIkRMpk3RKIGzeaCWzWwONbg7nQ1qbw3RsAb4r52UeIn1YuhIRJiDp5zK0mqNy2YipwUIOPr5909g7tCuzmfy+1sTiD1ey7A3PnCSFhEqIBvIhVBq9E1J7iA8A2Q/ycxwPvpHLiA5gb7zaS31AshIRJiBL0YnXq4loEM4HPE689eauyK5aKPqKCtQTWH+oRDRMhYRKisdyBZcCFE3Ipqwmsd9NhpF9oNQ26gRNZtxdUMdZi+6mWaYgICZMQjbeafoTFm+IwHiu6Oofq2qk3m04XpXcVCG0pa+mXwL9RryUhYRKiKTyJNehbGNNq2glr/7DjEDm/Lqwx4amUbx0fnfudwPdRbElImIRoGv1Ym/BfYS6sTBmBihIhDgB+DOze4pZTO5ZNeKpbe1QQpZeAs1C1ByFhEqLpLMK6yZ6OdWqlgji1AfsCvwD2bmFxegPwPWC7AquvmCitBS4E/oZceELCJERLsAyrU3cU1rG1r4I4ge0HugB4K/GLojaC0cDhWKxoZgxR6vPP/hRVExfrKZlcTgsuMaQXVrOAj2N7l8bHmNifB36ANRNc1OTjn4L1dPossHGMY18BXAycidqmCwmTEK07hl2QDgVOI54rbKVP8Gdhm3ebJUpfB97nx18p0WER1gPqohYQVCEkTELEZDe3ht4YTOi5EhN9FvhfbCPuvAYf50wsRrRvGRENj/UVLPX9D6TXmVcICZMQKVlPW/kkHlki5aynHHAd8BXgAdJPu+4C9scSN+bEsOxWA9cD38FSw7O6xULCJMTQZKIL02fJ18wrJwD3AmcAf8cKoqZBN3CMH9O2lN6nFB3TC5jb7hL/uxASJiGGOJ3Afi44cayTucDXgMtTsEwmAV8GPky8eNJ92H6mm7G2GkJImIRYX8Y3Vv3hx9g+oUpWykLgC1gspyeh378VVn3i/THEcTUW9/oyMF+3T0iYhFh/2RzL2DsSGEvllOwzsb1C9TTeawP2wOJXh1K6Snj0e58Cfoa57tTwT0iYhBgGTAE+hsV4JlQQiaXYBtYf1igSHcDBWJLDri5SpbIDB4AbgLOxzcJy3QkJk4RJDCNGYxtaz8Yy5Cp1hf0Z8CWqS9HuxCpSfBvYxN8rJUo9WKmk72CuOz2MQkiYxDCkHTgCc9dNLyEckXjksP1G3wRejiEco4HjgK8CkyuI0ssukD9HvZSEkDCJYU8b1rb8a8AuFcQp6+LxHaycUakHZjJwAtZLaWIZUcpiTQ+/T7rp6UJImIQYYnRgm13PIt+vqZQ4rQEuxRIoisWcNvF/+xDmIiz8rjCe9GfMzfcA2jArhIRJiCLshqWHV9qImwPOA77I4JjTROBbwEexzLtSlhIubqegVHAhyqK2F2K4cx9WkeF28s0FC4ne/xQWb5rk74/HNsJ+iHw6eDFRWoq57j4nURJCFpMQcRdo+2Iutj0rWE4rscSJ3wCfBD6DlRsq9fn5WJLDRf5/hRASJiFi0Y51uP0FMKOCOL2MJTC8mfIxpWXYBtvfAMt1iYWQMAlRC3tjTQS3rCBOIcXcd2uwPVAXkn7VciHWKxRjEmIwt2GxoMdjfr6YKC3C9jJdJFESQsIkRBJcC3wXiw9lyohRofsuikFdgLkE1dRPCAmTEInQg7W/OJvymXrF+JMLk2JKQtSIYkxClKYb26N0IrYht1IfpXuxBoVP6NIJIYtJiDRYg6WQ/x6LFWXKfPZZLDYlURJCwiREqizGXHq3FlhHobW0knzbCiGEhEmI1HkIK+K6sECcoj//jpU1Uu07ISRMQjSEHHAjVvFhbcG/vYB1u12oyySEhEmIRtLnAnSJW0aRtfRHzIWnLCIhEkJZeUJUxzZYlfC9sP5Mbyb+ZlwhhCwmIRLnaeAn2Obbc1AWnhCymIRoAcZhVcjvwcoPCSEkTEIIIdZX5MoTQgghYRJCCCEkTEIIISRMQgghhIRJCCGEhEkIIYSQMAkhhJAwCSGEEBImIYQQEiYhhBBCwiSEEEIA7VV+vgsYBYwEBrCmaauxXjVCCCFEqsLUhlVR3gbrPbMHsBUwyQUqB6zCyv8/gVVavg/rUbMc6E/RypvkApkUy4ClKR1vJ9Bd5P1eYE0D7u8UYETB+2uwjqtptAIfB2yQ4PdlgSXAyoSvy0bkm/2FlYwHgr/ngmvU76+1/mczqh93+nGPCI715YQWhqOBiQz2ovQBi4GeJs5RY3xM5YL7sTrh8VAP4/3ahfT4mE1yjHQBE4L70+/3Jo15tjt4hnNFnoViz0l/YKzU/XyUqi4+EdgXOALYG9i0yORWSJ+L1D3A9cDNwNwUBvVGwDf9uJISul8AP0rhBmf8On68iJDeivXzSdPafC1wnk9oIbcBXwNeTeF8jwc+k6DorfLrdGWC37kZcLEvcCLxywUP3EDwwEUP20oXgWeAR4DHgOca7C3YGTjfJ2p8gj6W+hsVbgZ8Dtg/EGuAa4Af+3PdrIXzicBRwX3q8/F7mi/ums0JPuZDngFOAp5N8LnaDzjVBSMDPAh8GZiXwjm9Gfi+j/3w2egPfh4I3usFVvh88ryf/1zgRawtTLaWG1/INB+kR/hqu9iqstR3be6vA4FHgT8Bl/sDnNTqocOPcacEb/qUFAfuZsAhvvILf+ds4GofYGmtro92Szdc2WSABVTvxq1m4bBjgvd7ZcIWWHRtdgY2ruI4M/6ArfXV8LPADT6+H03J+ixkFLB9cD1WFVmtV8s04Cs+VrqC9/8B/N7FuFlsCLwPmBPcpwwwA/gDcHcLCNMmwG4F7+3kE/NXE1y4bADs4oupjC/4O1I6p+h3VfsM5woWcU8AtwDX+t9jX4vC5IcJwBnAJ/yCZ0o8oOGrlFtgDvAt4IcFA344ki24fjkXw7enKBDbuiDmigye3BC7dmkcb6bK741EvdPv3Z6+gr0COLyIVZoWuRJ/r4UJwNeBYwqe0auBDwL/bZDgluKNBRNkdM828mNuheStXMHxZVwwPpGgVyf6Pdkif28loudjki+g3umW11XAN3wRVLXFNNrN46NK3PCVvtJ+CYtPrHWXwhQXsQ18cIditRq4jvR91MvcZMzVeDEXN+EG4sJxua+ukqQDOAiY2iID9pU63C4rSD+ekPWxvdZdFBnMdT3Cn5EoTjiy4NnIANsB52Kxhl8zNBKBMsAWmEv8/QyOW/wN+KLfs2YyBviIX/NcwbySAd4NXODWaquRA8YCn8XcrAvWg8X1C1hsus1fHf5stPs96izyfETGz3TgS74QPxf4C+b2y1USpjb/Tx8t8sU9wH+A/wXucGFa5Q9zp6+6tnQLaT/gNa6YfcBffUWZS3kQXAH8tMZVRKbBA6fPJ7xoUtsb88kmuQKairlToySVRb7w6CoQxkbQA5zspnwtv3cAcwWnuUJcAHzSH76sH2f0wI1yl9JmboXu6vdtTLBangKc7gucK2nN1Ww4UczCYozvDp73nK9sT/N71Wz2xpKuorljkd+XicE1fwfwJOklWtUyF/X6uAF4A/AW4NIEFizNHFO9/gw/7OMlfDZG+/Mx2Rc7W7oQbe7PSCZYWGwP/ADYB4vp31dKGyJhmgJ8OHjYwgO6DAs+zy0yANZg2WzPYgHJy30wfRTz3/+S5APspVbk/22hAVpu4D7uq+vN3Mo8yF0nSVltGcznvWtwD2/yBcPm/t6IBopTzgf0vS1sPfT4+HmmzGfa/UGc4vfsE8DMgsXAN7CY4RMtPAZnAmcCBxeI0hXAKf4sN9vV2w28y693dCx/8PvwseBzh/qc82yLXNs+4N9YjHWKL9qP8uevXq/IQBPvSw542p/jcs9Hp1uKG2JxtgOwRIpNg2MfAxyJZXif5MZO0dUTwO6sG7DOAP/yleDjMSb9Xl9x/sFXMkdhmWe5Bk0uQ4XHffBG/uh9sWBuUrS79btRYA3+o4kupsgtNpTJ+fVb5vfvPCwb7ikGJwdt59e+VTeuT3FXytvIB86zWJLSCS7MrRB/3M6fi+hYlgC/dREKF3CzsMzTVnn+s1iw/7rAStgbOIz1m+j5WIllcD4I/A7LVtzHraTQQOkAXu9Gz5xi9y/yFe7kSheyAgtc1ZKOuMoPrhdRzLX1R/J7mDbBMiDbEnyoDwgGzNW+WmvUZDkURKi9zuPM+Urvk26tZ4LnaR9fMbba+c7BsuwOLFjhX4Fl5S1qkWPtcFHaNHjvNiyW9AhwZ/D+Bj7Wx7XQtV7hnqKX/OdO9yDNGoZzXc4XO6e6oXIV+XyDHLZH9sfu4ckUCtMoN6s6C1a59wO3S0dSsSDuCqymNndbbJXQBPSB4KFe4pPRQANXlUNBmJIS6RuxZIHQypiOubFb6Vz3BM7yCT9c3V+BZeU92ULHuyEWqx4VLHKv9wl/KfBPfy9cCMxo4vEWi/3cie2NjP5ta8xNOo7hSa/ftxOBn7jnIRKn2ViSyCaFg7bbH6TCieuRYACIZFkFXIRlgeV8MjsygQlza2w/Spvfz39iG57bUF3ENOjH4gdh1uk4LEDfKuzuno83MHij5GXAF7B4WCttH9i+wL3zvFtMff66JbBG8AXdQS0kTCP8uf6pL+wjl/3hWFwvM0yflRyWxPRtvzZrAgv57Zh7eZAwtVF8D4bq36XLdW6VRlbU+7CslnpWxu/wlUfOV5i/pbg7tV5XVrUWVMd6fB9fwLZFRIykeAmqZlhKc3zlvlcwIfa6FX0KFn9sJVHKAG9l8Ib3Oxhc2eJRBm+s7cCyCye1yDWPrvOr2B7OKCY2CnPpTRuCY3yA5BLLlrnVdE0w9sZhMc6phS6NYoNzi/V8Qmk2y7HU4l6//lti/v9aN9xu4Q91xD0M9sc3e8JZX8lSur5es+h0K+IXDN6gmgX+B9u/9HILXstoDEfjZQ0WI11R8NxcHSycc1ji1ltaZJyFC75/+bFGtePmuHVQy2bsZo+rgQS/az6WQBRavjti+9baI2HqdRUrFKfZPlmK9LjRzdtoMjkUy6arZaW2NxZgzWGupX/QOgHtVqMtwUlsXMFEs5b0NpSPiGHptmEuo29jSU25wANyCRZTeprWq/4RbZrdknxG20NYLLaw2sXNWK3CTGA1HUdruFAzwYJ/IeYyfcnfH4e52qfXKEy59eT5i5KHfl8wbo+JLMo2d0O8UGTVNxVLiZXVlB5P+g2KHsTZPplUO2mO8xVy9GC+5A+vsiKL00FyMbfCjNZVpFepPs642A/bd7hr8Pl+LFPscyRbtzJJojJDI4I56LcUr0AxH0sdDytfz8Zclq02Af8bq3QQLviPRzHfXh+TC8hvwp2GxUIzkcV0f4G5HD0Ex2JB+TEtrr69tPZu+1IsxQocRhPZpliZompN/ZnA64KJ6E4seaWVVsPrI5tjQe1wknmG9CqJlJvMutziuARLgonowUolnYG5wVqRqHr2dsEi7Wng/8o883/AqldHjMLcec2eqwoX8muAn/m4iBIhPoRlEw7XRIiIpzB3Zy4Y3/sAY9t8Qv8P6+5Wj8p+fBPL3tmW9AqODifCqgtZLOPoieABPZjqkiCigPEWgcvmL+RTMqud4NKYdDqGwD0ZUeU5TfPJPtyY3o+5Zxtde3G0LyC/556OXLAqvQRz681v4eu/gYtKe/BcXOWenFI854u6sIDq3i5urbYIewyrthHVfNwQq3owheFN1oUpjBfuAExpC27yL/3BKryw07CijpdhZVimSunrHrihMLzoD2F0TWdgVXnjXuNNfdXeQd4vf3MFd02mCeLU6rRV8bk5WAr2e4P/F+39u5LGlcaKvATvwWJHWxZYShf4+8+1+LXfFmvPEo2Tl7E6m+W8IP3+3ISLgG3cc9DRxGe7WLmvrFt41wUT8BtJt7vAUOEhBru+pwCbhVWFL/PVVbHB0O0D54duXh+D1YFqlQknGhBtNbyafQ79WIHcV4Lz+BDxNmlGAeOZ5IOjl9B6GVft7mrqruHV3gJjK+PHv4NbSVe6GIQu1/nYRsFnGyymH8BKvkxjcEr4RVih1ldafGLqwOIK04P37qN0XbaQe7Eah+E8dSjrVrFptsUE5ka9kHwlnTE+j8bZWN/MjLwMg5tnJs3LWJJIxDhgw/aCFdZpPjEezrq+2lywWvyZW09X+CrgSZq3GbcNK+mzQ43/vxerB/hUEwfz0y5OJ/jPM7E9ST+vMCA3xfrmRMHDx0m/mnstovQDXxXVYqVd6pNsNuFjCl13nZhLbowfY7QXaYIvELbG0q53wqoohxlS/cADmLvsPw2+tmOBT/sxR8ezCuvO+12Gxgb5DbHEnc7g+G8gXkbpq+4K2jv4/6/x199b0PK+0y3B430M7uILy7OpvG+0sIhrtsFildacsprBYYdRwPj2IuoVpZMew+AganiAHW5B7YRtDP0nVgjyPvI7etO88YXHPYvaa1H1YBu+milM/ViW0eE+8UWW0F8oHRtowwLGs4IV1V9pzVjC9nWs1m7zc03yIcwUjOfJWCZbL/n6kVEPpq4CyygKzmf9Wl/l4nlXkxYEoShlsMLJZzF0egC9BqtOER3/S1gmW5wN/lHl/OPIV84f71bkjTQnK7VclZVlwG+wFvYzfHwdg5W1ur9JwlCMRpYVi4q/hovGkW1FTv4Ff0jfC5xfYYB3YWmpJ5IvcTKZoUWrWBcP+iQcHdMulK+cPAnzUUc9luaxbt22Uu6Fct2HW41GHGsb5grbFotTTMN83eMDUQq7Nj+PubUPx+Kv/6F1KqVs69bfUEhH7sCSNsYH791B/OZ/ObdW7wrGSJRAtHOLzjV3Ab8KntMZWK+j7hY6zkYKU7bg2ckAI0oN3jWY//ZzPvldhPmq+8sMsOmYT/t8X71kGnxyvTW++kjPf1oNK1xYVgbCczDFCz9mfPKZHQz4uynfLyXTpIGXCSy6al8DLTrBLsF29N+JxQ6atbjpw9zoYcvt6Vh23j5DQJx2xPr1ZAJ31Z+ormPxUuDPBddgogteo5MgIms7U+GeXUS+QHYUimiVyhXNWnyG4j1QKbDc7xPeQ9heiCMxf/DWFA9Kt7sLamMsEHxfgx7aqMNuLb9rLa2RtZT1wfq4C05YOfnugs92YuWLoiriUQXmJS068K7C3MO1DNibU144RI0C7/IJMUe+vt84LAYyhcHuvJ2xcv2fZN3KBI1ktXspjsJikl3BhP99t+b+TWvu8YuspagjbVR1/5YavusGbN9emLp/MBZre7jB5xVn0bfIFw8XYRuLO3ws3Uf9DQWHGiMKnq1+YG3cjKcenzQfwYLrh7vKTy3xUL4ei1V9gcbEbh7EKtbWmqbbKu68p/3B3M2FaSus30yhMG3iD160OnvOJ/BWLLwbZQpeU+P/709hYi3MxnwVK2r6TDBJtmPJEJOx4Pp7GVyVYwcslvN+mhefbMO2G5zuP78rGBNzXDxP9kVLq4nTVm4lhCWTfkNte8AWYI3pvhVY6FsAbyJek9O0Vv/luAnLcD7Wx9psrKHgT0ivpFU9z3BadBZ4hdYAK6s19ZdjwdVT/CG4qsxkeCBWF6qrgRev1lersMon8NXBTTsCyw4LOcBXhxHX09zkjThWaU+NrzQmlcKsvAEsZXW+T3LzsVjroy74Z2PZj7cWTDx7YPHVZsYHMtgG7dOwgH8Ya9nJxWnfFnMTtWEp4mGl7SexZJ9cjc/+n1m3EsQB1FZ7sl4LIM61Xo7F5SNvzRi3fGe04PObTXHRuwGDK8OvBBa21TgIerAg5XHYvo5Xi3yuyyfVVrzQrcydmGsyGtw7YXG+6OeJ2D6nyH++AnNjqi5eevRh+2U+hgXbQw5zi6qZE3/OFyafwKohhJPItu42aiVx2hCLLY0KJr7rqC+T8BkX5jBDMao92YrksA4AVwSLr519MV/Mk5XmXqJmMq1g8bAQWFBvcDTqOXIyxdOUZ2C130R8lmGur7X+cwfwcX+YM26Jzg5cTtdivuk0VnViMI9ipWVCd9MUX4CNb4Hjewb4lFse4UJld2xfU6skROzgYzis9HBdnRNvrz8LSwruzaENPOdwo39cD8mlmLsxqsZyNFa9Yrjw2mCBknHLeV4SN2wVVr78giKr9g4sWaILUQ3X+so88pfPdtfHBlhMY2RgLV1C9XvHGl2SaH3iBgYXnmz3xdcuLXJ8c7H47tXk40oZzO14Eebeaua9b8NiP5sF7z3oFmk9bvXIAnms4HcdSj5JqFHiVA2PY7HK6BneBHPLTk7gu1udCQXjMYd5jJYlNUD7MHfSEyVWRxsjqmGRX89oBTkSi+nti21IjB7gu3ySFI1jiVskYaXuzbEMs1aYOHJYktKXyLf2jpjpHo7XN/FYJ7hYtAeWzj9JZmP481gWYhiX3MYt2kadb7W/J2reeHXwf/f1Y17fF48HYYle0Xy2BnPH9id54gspXqF8nK8CRHVEpZ6i67gvtq9sA3+vxwfz6hY77hFD4NrWU38v65NfYazp7bRWPGMulvH1NwZXb57lK/RmufXewuDEnQUuTEkkufT4c7OsQCg+ROMqedfiJu/FPE7PBJbe0dReZm0oMBVzO4fzxTV4en+SA7Of4psN22mtXc1DhWcYvAdlEwZXTn66yOpQwtQYniffMpvg/nyU2tpmp8VTWPw3bEUOlkr+QywBoZFFcsdjCVMjA9G4mfiVHuJwL+YOyhSI8YEpWU1ZksnsvQfbXByFQ3bG9oS2wtyZdPbyaCzLdU7wvYuAH7nVlKgwtflDmSlyUutjNknarMDiGUuKuAlK9dBKc1Un8vRhFcafL7iOh1N7XcC0eASLWdzE4FTy3bBU8gMbaDnthWUw5gIL53KSLTa7zL9zoGC8H0Y6rdcLF4a1dkdege3Fmuv3pxuLJ++QkjhUK0xJ7YOLanweHyzicsAfyVfDSHRAdrNukDGD56VrLqtpJXY7FswNV39g7rtrqa8jqZIf6mMug2uegaW9HtZiVlPO3SOfZt1Cs9tgFSL2bcB46MbipKG1dAe1VXqodL7XFHluZpNOgkq2yJyXqfG4/4tl6UXfuTW2T67LhTbb5HGUhCjtjm2EDguEPwT8IhT5JAfjLCy4WsiL5HuQiOp4iXXL90fNAG+tYrC0SYgSF+Uc8Fvyqb7RvTmQ4lX5m83jWNXtwn1OO2Cp5G9MeYzMYnAadGQtrUzhdy1mcPIQWALWgbR2WKEfq35xa/Deu7D45VB3kY/3c/kVgwvsLsLaKD1U6gGtp+BhVL594yIP7211ruyH86TYj2WAPeLiPg+rSHAZ1TUDlNtuMO0JPejP+eS6NnhvOyyxoBU7kz4OfAX4R8HqOypfdFBKx93h12SLYDH1BJb0kNbq/mrM1Roew5tIP3W8Xjf5ArcooqIFY7C6o9NorSo11S5KTsX6soUJHX1uKV1OQRmmaJKcgPmh34MFpqqhE8uueE+RGxKl1mYRkUBUO3Af9hXTm/11UIG5L2qbPJKaAP/C4AK147F06DEteu73+yRRmEq+g08cb0rBctoQ268yOrhuN7lHIC2ewuKw4WS+I5Yqn/YzXu+YuhlrxR7FlXbD+t6F+0GTSrpI8zpsDnzerdfPMnjvWh9WF/A7FKmP2O5fsA9WzmScrzQuxjJbllC6RlKbW0gfAL7qF62ww+KNrFuANM0LkalzQLQiWZKvONzRYNfAUF3pxWEuVqswrLj/OmxD63UteLw5bEPrJ9yF8ppAiGb6RNHL4E3E9bI9+RYtuLX/T9Ld6rDc78uh5KtyjPIF9P+QXkPTaio/lKLXvSL7+bXrxJoLZlrsmcoEi+0o+3q8H/MB2NaAGUWOdxG22fs7lHDltvtq5t3Y/pg24J0uVLe7sNzvJvEynyQ7sV3JO/pnD/DVYeGFegbzJy5qwAXaCnhbnZP/fCzVtBUrdA91tiHfpbQWVvp4asV7swLrHPyOYEU4EdtDdEvCE2CS2ZQPAidg8aX9yLvyd8X2OX2JZLYjRHNK6OZ/yOeVNCfXrC+un2Jw37LXY5mBN7S4Nf6QWxqn+Jw7oomC1OHXbIuC90Zh3rYNMRfpdH/Wp7uRkyk43mhR9FNfHJSML7Zj/uXCMiWTXO3ehGXUvYz5PAfcHN8Y27C2AcW7o67BfNY3Ncjl9EY3d+tZRV7jZudS6Ujiq6qTsXp/tXKP35tXWtQCuRMLWB8ZPIiHujVyc8LXMkk32wPu7TgzWJFHLTMu8Gt+XZ3iNM3nkqgFfNatpUYkRD3t9yW01sZie6luS9FqSmLxEJV6e4tb3zmaFyse64uVtQwuxTXSBarb/95WxlPyKpYSfrGLbtnWHu0uLh1F1A3/hZv7ixKfKbaC/LKbao1a4XZSf3n7zhRWI0o6sGs6tc7vWEiyQfmk3ZhLsQy9sIzMBGyvxh20Xn+d8N7cDZzkxx822tsOizmd4AvMXI3j/whgy2BiXeaLwEbMDWvcmj0hGD85LFa7I5Y+n4YoJbV4eNIX+L/2MZtr0hjJUFv1noyL2TV+HrfEve9trmLvxtxuL1C+fUK5CxN1Af2Ir7b6Ur5Y2YRfabVYTyoDbDhbXEkLfFsKrpF/Ydlu4d6Z/bHqya2+QPkvFiu+NbCOslh84ExsY2wt57Aptkk05Cpq3xheC3ezbh+tDTDXf2dCY6ncz/XOc1dirTGGQrJTFnPPvegW6Tm+CDgaCwvF1oR2F6JbfHDuhrn19sFS/CZVmFSzbiE9ju2P+JObaWkq+0osQWNuwhf09hTENIclkNwfmOd30vjeSa/4hDDBf36RwfXEkiQqpZT0xJnkNVvkxxiN7fnUH4hfDpxbsBDpw/zy7QmNrYVY7bso4291gvfxfqwW43FYfKDPLY4eXy3Xcg6b+rVd7NdkLfDzBluQy4ALycfQogl+lJ/nq3V+/3M+90XNMG9PeKyuwhpV9pLPamzzZyItV+RSrJVOlMgRJjmEcc4+H4Mr/Dq+iMX0HvP5eX6t1yKTy62jId1YMGsGFrDe2U3xib7CyPrBzMMCWXf4SSzwG5O2uZnBMgCTtkL6U3pgxvm16/dXdCMbaZZ3+KCOVnMDfgzZlM53XMLf2etiktTxdvk9aQvu/ULqD/R3+LMTspriNSRr/f4JBVbZEpKrl5jB4glRPGgg+LO3hnPoDo63jXyn4EYnsXQVuS9rXTDrvXaj/RVep9UJP99t/kyNKJiv0nyGJwWiFApUu/8968ewxs+51+fP3iTG4/8DfiufbryyrikAAAAASUVORK5CYII=" alt="Semerkand">
+      <span>Kurtköy Şubesi</span>
+      <h2>Vakıf Takip Sistemi</h2>
+    </div>
+    <nav class="menu" id="menu"></nav>
+    <div class="yan-alt">
+      <div class="ad" id="kul-ad"></div>
+      <div class="rol" id="kul-rol"></div>
+      <button id="cikis-btn">Çıkış yap</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="ana-bas">
+      <div>
+        <h1 id="modul-ad">—</h1>
+        <p id="modul-aciklama"></p>
+      </div>
+      <div class="arac">
+        <input type="search" id="ara" placeholder="Kayıtlarda ara…">
+        <button class="btn" id="ekle-btn">+ Yeni Kayıt</button>
+      </div>
+    </div>
+    <div class="ozet gizli" id="ozet"></div>
+    <div id="icerik"><div class="yukleniyor">Yükleniyor…</div></div>
+  </main>
+</div>
+
+<!-- ================= FORM ================= -->
+<div class="perde gizli" id="perde">
+  <div class="pencere">
+    <div class="pencere-bas">
+      <h3 id="form-baslik">Yeni Kayıt</h3>
+      <button class="kapat" id="form-kapat">&times;</button>
+    </div>
+    <div class="pencere-govde" id="form-govde"></div>
+    <div class="pencere-alt">
+      <button class="btn ikincil" id="form-iptal">İptal</button>
+      <button class="btn" id="form-kaydet">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+/* =====================================================================
+   AYARLAR — Supabase > Project Settings > Data API'den kopyala
+   ===================================================================== */
+const SUPABASE_URL      = "https://zfujfdzhymlrighxhebl.supabase.co";   // Semerkand Kurtkoy projesi
+const SUPABASE_ANON_KEY = "sb_publishable_9kUSG4qWWfUI7M8MkQdpQw_LDza6AMj";    // publishable key (tarayıcıda güvenli)
+/* ===================================================================== */
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $  = id => document.getElementById(id);
+
+const GOREV_AD = {baskan:"Başkan", mudur:"Müdür", ticaret:"Ticaret",
+                  sosyal:"Sosyal", dergi:"Dergi", vekil:"Vekil"};
+const KOL_AD   = {erkek:"Erkek Kolu", kadin:"Kadın Kolu"};
+
+let ben = null, moduller = [], aktifModul = null, alanlar = [], kayitlar = [];
+let yazabilir = false, silebilir = false, duzenlenen = null;
+
+const paraYaz = n => "₺" + (Number(n)||0).toLocaleString("tr-TR",{maximumFractionDigits:2});
+const tarihYaz = t => t ? new Date(t).toLocaleDateString("tr-TR") : "—";
+
+/* ---------------- GİRİŞ ---------------- */
+let kurulumModu = false;
+
+(async () => {
+  const { data } = await sb.rpc("kurulum_gerekli");
+  if (data === true) {
+    kurulumModu = true;
+    $("ad-alani").classList.remove("gizli");
+    $("kurulum-notu").classList.remove("gizli");
+    $("giris-btn").textContent = "Kurulumu Tamamla";
+  }
+})();
+
+$("giris-btn").onclick = async () => {
+  const hata = $("giris-hata");
+  hata.classList.add("gizli");
+  const eposta = $("eposta").value.trim(), sifre = $("sifre").value;
+  if (!eposta || !sifre) { hata.textContent = "E-posta ve şifre gerekli."; hata.classList.remove("gizli"); return; }
+
+  if (kurulumModu) {
+    if (sifre.length < 6) { hata.textContent = "Şifre en az 6 karakter olmalı."; hata.classList.remove("gizli"); return; }
+    $("giris-btn").textContent = "Kuruluyor…";
+    const { error: e1 } = await sb.auth.signUp({ email: eposta, password: sifre });
+    if (e1) { $("giris-btn").textContent = "Kurulumu Tamamla";
+      hata.textContent = "Kurulamadı: " + e1.message; hata.classList.remove("gizli"); return; }
+    await sb.auth.signInWithPassword({ email: eposta, password: sifre });
+    const { data: ok } = await sb.rpc("ilk_kullanici_kur", { p_ad: $("kurulum-ad").value.trim() });
+    $("giris-btn").textContent = "Kurulumu Tamamla";
+    if (ok !== true) {
+      hata.textContent = "E-posta onayı bekleniyor olabilir. Supabase > Authentication > Sign In / Providers > 'Confirm email' kapalı olmalı.";
+      hata.classList.remove("gizli"); return;
+    }
+    kurulumModu = false;
+    baslat(); return;
+  }
+
+  $("giris-btn").textContent = "Giriş yapılıyor…";
+  const { error } = await sb.auth.signInWithPassword({ email: eposta, password: sifre });
+  $("giris-btn").textContent = "Giriş Yap";
+  if (error) {
+    if (error.message?.includes("Failed to fetch") || error.status === 0 || error.name === "AuthRetryableFetchError") {
+      hata.textContent = "Supabase sunucusuna ulaşılamıyor! Proje uyku modunda (Paused) olabilir. Supabase panelinden 'Restore' butonuna basın.";
+    } else {
+      hata.textContent = "Giriş başarısız: " + (error.message === "Invalid login credentials" ? "E-posta veya şifre hatalı." : error.message);
+    }
+    hata.classList.remove("gizli");
+  }
+};
+$("sifre").addEventListener("keydown", e => { if (e.key === "Enter") $("giris-btn").click(); });
+$("cikis-btn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+sb.auth.onAuthStateChange((_e, oturum) => { if (oturum) baslat(); });
+(async () => { const { data } = await sb.auth.getSession(); if (data.session) baslat(); })();
+
+/* ---------------- BAŞLAT ---------------- */
+async function baslat() {
+  const { data: kul, error } = await sb.from("kullanicilar")
+    .select("*").eq("id", (await sb.auth.getUser()).data.user.id).single();
+
+  if (error || !kul) {
+    $("giris-hata").textContent = "Hesabınız henüz yetkilendirilmemiş. Müdüre bildirin.";
+    $("giris-hata").classList.remove("gizli");
+    await sb.auth.signOut();
+    return;
+  }
+  ben = kul;
+  $("giris").classList.add("gizli");
+  $("uygulama").classList.remove("gizli");
+  $("kul-ad").textContent  = ben.ad_soyad;
+  $("kul-rol").textContent = `${KOL_AD[ben.kol]} · ${GOREV_AD[ben.gorev]}`;
+  await modulleriYukle();
+}
+
+async function modulleriYukle() {
+  const { data } = await sb.from("moduller").select("*").eq("aktif", true).order("sira");
+  moduller = data || [];
+  const erkekM = moduller.filter(m => m.kol !== "kadin");
+  const kadinM = moduller.filter(m => m.kol === "kadin");
+
+  let html = "";
+  if (erkekM.length) {
+    html += `<div class="menu-baslik">Vakıf</div>` +
+      erkekM.map(m => `<button data-id="${m.id}">${m.ad}</button>`).join("");
+  }
+  if (kadinM.length) {
+    html += `<div class="menu-baslik">Kadın Kolu</div>` +
+      kadinM.map(m => `<button data-id="${m.id}">${m.ad}</button>`).join("");
+  }
+  html += `<div class="menu-baslik">Genel</div><button data-id="talepler">Talepler</button>`;
+  if (yonetici()) html += `<button data-id="yonetim">Yönetim</button>`;
+  $("menu").innerHTML = html;
+
+  $("menu").querySelectorAll("button").forEach(b => {
+    b.onclick = () => b.dataset.id === "talepler" ? talepleriAc()
+                    : b.dataset.id === "yonetim"  ? yonetimAc()
+                    : modulAc(b.dataset.id);
+  });
+
+  if (moduller.length) modulAc(moduller[0].id);
+  else $("icerik").innerHTML = `<div class="bos">Görebileceğiniz modül yok. Müdürden yetki isteyin.</div>`;
+}
+
+/* ---------------- MODÜL ---------------- */
+async function modulAc(id) {
+  aktifModul = moduller.find(m => m.id === id);
+  if (!aktifModul) return;
+  menuIsaretle(id);
+  $("modul-ad").textContent = aktifModul.ad + (aktifModul.kol === "kadin" ? " — Kadın Kolu" : "");
+  $("modul-aciklama").textContent = aktifModul.aciklama || "";
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+  $("ara").classList.remove("gizli");
+
+  const [{ data: y }, { data: s }, { data: al }, { data: kay }] = await Promise.all([
+    sb.rpc("modul_yazabilir", { p_modul: id }),
+    sb.rpc("modul_silebilir", { p_modul: id }),
+    sb.from("modul_alanlari").select("*").eq("modul_id", id).order("sira"),
+    sb.from("kayitlar").select("*").eq("modul_id", id).order("olusturuldu", { ascending: false })
+  ]);
+
+  yazabilir = !!y; silebilir = !!s; alanlar = al || []; kayitlar = kay || [];
+  $("ekle-btn").textContent = yazabilir ? "+ Yeni Kayıt" : "+ Talep Oluştur";
+  $("ekle-btn").classList.remove("gizli");
+  ozetCiz();
+  tabloCiz();
+}
+
+function menuIsaretle(id) {
+  $("menu").querySelectorAll("button").forEach(b =>
+    b.classList.toggle("aktif", b.dataset.id === id));
+}
+
+function ozetCiz() {
+  const paraAlan = alanlar.filter(a => a.tip === "para");
+  if (!paraAlan.length || !kayitlar.length) { $("ozet").classList.add("gizli"); return; }
+  let html = `<div><div class="k">Kayıt Sayısı</div><div class="v">${kayitlar.length}</div></div>`;
+  paraAlan.forEach(a => {
+    const t = kayitlar.reduce((s, k) => s + (Number(k.veri[a.kod]) || 0), 0);
+    html += `<div><div class="k">${a.etiket} Toplam</div><div class="v">${paraYaz(t)}</div></div>`;
+  });
+  const b = alanlar.find(a => a.kod === "borc"), o = alanlar.find(a => a.kod === "odenen");
+  if (b && o) {
+    const kalan = kayitlar.reduce((s, k) =>
+      s + ((Number(k.veri.borc) || 0) - (Number(k.veri.odenen) || 0)), 0);
+    html += `<div><div class="k">Kalan</div><div class="v" style="color:var(--kirmizi)">${paraYaz(kalan)}</div></div>`;
+  }
+  $("ozet").innerHTML = html;
+  $("ozet").classList.remove("gizli");
+}
+
+function hucreYaz(alan, deger) {
+  if (deger === null || deger === undefined || deger === "") return "—";
+  if (alan.tip === "para")       return paraYaz(deger);
+  if (alan.tip === "tarih")      return tarihYaz(deger);
+  if (alan.tip === "sayi")       return Number(deger).toLocaleString("tr-TR");
+  if (alan.tip === "evet_hayir") return deger ? "Evet" : "Hayır";
+  if (alan.kod === "durum") {
+    const s = {"Açık":"acik","Kısmi Ödendi":"kismi","Kapandı":"kapali"}[deger] || "bekle";
+    return `<span class="rozet ${s}">${deger}</span>`;
+  }
+  return String(deger);
+}
+
+function tabloCiz() {
+  const q = $("ara").value.toLowerCase().trim();
+  const liste = q ? kayitlar.filter(k => JSON.stringify(k.veri).toLowerCase().includes(q)) : kayitlar;
+
+  if (!liste.length) {
+    $("icerik").innerHTML = `<div class="tablo-kutu"><div class="bos">${
+      q ? "Aramaya uyan kayıt yok." : "Bu modülde henüz kayıt yok."}</div></div>`;
+    return;
+  }
+  const gosterilecek = alanlar.slice(0, 7);
+  $("icerik").innerHTML = `<div class="tablo-kutu"><table>
+    <thead><tr>${gosterilecek.map(a =>
+      `<th class="${a.tip === "para" || a.tip === "sayi" ? "sag" : ""}">${a.etiket}</th>`).join("")}
+      <th class="sag">İşlem</th></tr></thead>
+    <tbody>${liste.map(k => `<tr>${gosterilecek.map(a =>
+      `<td class="${a.tip === "para" || a.tip === "sayi" ? "sag" : ""}">${hucreYaz(a, k.veri[a.kod])}</td>`).join("")}
+      <td class="sag">
+        ${yazabilir ? `<button class="btn ikincil kucuk" data-duzenle="${k.id}">Düzenle</button>` : ""}
+        ${silebilir ? `<button class="btn tehlike kucuk" data-sil="${k.id}">Sil</button>` : ""}
+        ${!yazabilir && !silebilir ? "—" : ""}
+      </td></tr>`).join("")}</tbody></table></div>`;
+
+  $("icerik").querySelectorAll("[data-duzenle]").forEach(b =>
+    b.onclick = () => formAc(kayitlar.find(k => k.id === b.dataset.duzenle)));
+  $("icerik").querySelectorAll("[data-sil]").forEach(b =>
+    b.onclick = () => kayitSil(b.dataset.sil));
+}
+
+$("ara").oninput = () => { if (aktifModul) tabloCiz(); };
+
+/* ---------------- FORM ---------------- */
+$("ekle-btn").onclick = () => formAc(null);
+$("form-kapat").onclick = $("form-iptal").onclick = () => $("perde").classList.add("gizli");
+
+function formAc(kayit) {
+  duzenlenen = kayit;
+  $("form-kaydet").onclick = kayitKaydet;
+  $("form-baslik").textContent = kayit ? "Kaydı Düzenle"
+    : (yazabilir ? "Yeni Kayıt" : "Talep Oluştur");
+  $("form-govde").innerHTML = alanlar.map(a => {
+    const d = kayit ? (kayit.veri[a.kod] ?? "") : "";
+    const genis = (a.tip === "uzun_metin" || a.kod === "aciklama") ? "genis" : "";
+    let girdi;
+    if (a.tip === "uzun_metin")
+      girdi = `<textarea rows="3" data-kod="${a.kod}">${d}</textarea>`;
+    else if (a.tip === "secim")
+      girdi = `<select data-kod="${a.kod}"><option value="">— seçiniz —</option>${
+        (a.secenekler || []).map(s =>
+          `<option ${s === d ? "selected" : ""}>${s}</option>`).join("")}</select>`;
+    else if (a.tip === "evet_hayir")
+      girdi = `<select data-kod="${a.kod}"><option value="">—</option>
+        <option value="1" ${d ? "selected" : ""}>Evet</option>
+        <option value="0" ${d === false ? "selected" : ""}>Hayır</option></select>`;
+    else {
+      const t = a.tip === "tarih" ? "date" : (a.tip === "para" || a.tip === "sayi") ? "number" : "text";
+      girdi = `<input type="${t}" ${t === "number" ? 'step="0.01"' : ""} data-kod="${a.kod}" value="${d}">`;
+    }
+    return `<div class="alan ${genis}">
+      <label>${a.etiket}${a.zorunlu ? ' <span style="color:var(--kirmizi)">*</span>' : ""}</label>
+      ${girdi}</div>`;
+  }).join("");
+  $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
+  $("perde").classList.remove("gizli");
+}
+
+async function kayitKaydet() {
+  const veri = {};
+  let eksik = null;
+  $("form-govde").querySelectorAll("[data-kod]").forEach(el => {
+    const a = alanlar.find(x => x.kod === el.dataset.kod);
+    let v = el.value;
+    if (a.zorunlu && !v) eksik = a.etiket;
+    if (v === "") { veri[a.kod] = null; return; }
+    if (a.tip === "para" || a.tip === "sayi") v = Number(v);
+    if (a.tip === "evet_hayir") v = v === "1";
+    veri[a.kod] = v;
+  });
+  if (eksik) { alert(`"${eksik}" alanı zorunlu.`); return; }
+
+  $("form-kaydet").textContent = "Kaydediliyor…";
+  const kol = aktifModul.kol || ben.kol;
+  const baslik = veri.aciklama || veri.ad_soyad || veri.baslik || null;
+  let hata;
+
+  if (!yazabilir) {
+    ({ error: hata } = await sb.from("talepler").insert({
+      modul_id: aktifModul.id, tip: duzenlenen ? "duzeltme" : "ekleme",
+      kayit_id: duzenlenen?.id || null, veri, olusturan: ben.id
+    }));
+  } else if (duzenlenen) {
+    ({ error: hata } = await sb.from("kayitlar")
+      .update({ veri, baslik }).eq("id", duzenlenen.id));
+  } else {
+    ({ error: hata } = await sb.from("kayitlar").insert({
+      modul_id: aktifModul.id, kol, veri, baslik, olusturan: ben.id
+    }));
+  }
+
+  $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
+  if (hata) { alert("Kaydedilemedi: " + hata.message); return; }
+  $("perde").classList.add("gizli");
+  yazabilir ? modulAc(aktifModul.id) : alert("Talebiniz gönderildi. Yetkili onayına düştü.");
+}
+
+async function kayitSil(id) {
+  if (!confirm("Bu kayıt kalıcı olarak silinecek. Emin misiniz?")) return;
+  const { error } = await sb.from("kayitlar").delete().eq("id", id);
+  if (error) { alert("Silinemedi: " + error.message); return; }
+  modulAc(aktifModul.id);
+}
+
+/* ---------------- TALEPLER ---------------- */
+async function talepleriAc() {
+  aktifModul = null;
+  menuIsaretle("talepler");
+  $("modul-ad").textContent = "Talepler";
+  $("modul-aciklama").textContent = "Yetkisi olmayan kullanıcıların açtığı kayıt talepleri";
+  $("ozet").classList.add("gizli");
+  $("ekle-btn").classList.add("gizli");
+  $("ara").classList.add("gizli");
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+
+  const { data } = await sb.from("talepler")
+    .select("*, moduller(ad), kullanicilar!talepler_olusturan_fkey(ad_soyad)")
+    .order("olusturuldu", { ascending: false });
+
+  if (!data?.length) {
+    $("icerik").innerHTML = `<div class="tablo-kutu"><div class="bos">Bekleyen talep yok.</div></div>`;
+    return;
+  }
+  const durumSinif = { beklemede:"bekle", onaylandi:"onay", reddedildi:"red" };
+  const durumAd    = { beklemede:"Beklemede", onaylandi:"Onaylandı", reddedildi:"Reddedildi" };
+
+  $("icerik").innerHTML = `<div class="tablo-kutu"><table>
+    <thead><tr><th>Tarih</th><th>Modül</th><th>Talep Eden</th><th>Tip</th>
+    <th>İçerik</th><th>Durum</th><th class="sag">İşlem</th></tr></thead>
+    <tbody>${data.map(t => `<tr>
+      <td>${tarihYaz(t.olusturuldu)}</td>
+      <td>${t.moduller?.ad || "—"}</td>
+      <td>${t.kullanicilar?.ad_soyad || "—"}</td>
+      <td>${t.tip === "ekleme" ? "Ekleme" : t.tip === "duzeltme" ? "Düzeltme" : "Silme"}</td>
+      <td style="max-width:260px;font-size:12px;color:var(--soluk)">${
+        Object.entries(t.veri).filter(([,v]) => v).slice(0,3)
+          .map(([k,v]) => `${k}: ${v}`).join(" · ") || "—"}</td>
+      <td><span class="rozet ${durumSinif[t.durum]}">${durumAd[t.durum]}</span></td>
+      <td class="sag">${t.durum === "beklemede"
+        ? `<button class="btn kucuk" data-onay="${t.id}">Onayla</button>
+           <button class="btn tehlike kucuk" data-red="${t.id}">Reddet</button>`
+        : "—"}</td></tr>`).join("")}</tbody></table></div>`;
+
+  $("icerik").querySelectorAll("[data-onay]").forEach(b =>
+    b.onclick = () => talepKarar(data.find(t => t.id === b.dataset.onay), true));
+  $("icerik").querySelectorAll("[data-red]").forEach(b =>
+    b.onclick = () => talepKarar(data.find(t => t.id === b.dataset.red), false));
+}
+
+async function talepKarar(talep, onay) {
+  if (onay && talep.tip === "ekleme") {
+    const m = moduller.find(x => x.id === talep.modul_id);
+    const { error } = await sb.from("kayitlar").insert({
+      modul_id: talep.modul_id, kol: m?.kol || ben.kol,
+      veri: talep.veri, baslik: talep.veri.aciklama || null, olusturan: talep.olusturan
+    });
+    if (error) { alert("Kayıt oluşturulamadı: " + error.message); return; }
+  }
+  if (onay && talep.tip === "duzeltme" && talep.kayit_id) {
+    await sb.from("kayitlar").update({ veri: talep.veri }).eq("id", talep.kayit_id);
+  }
+  if (onay && talep.tip === "silme" && talep.kayit_id) {
+    await sb.from("kayitlar").delete().eq("id", talep.kayit_id);
+  }
+  await sb.from("talepler").update({
+    durum: onay ? "onaylandi" : "reddedildi",
+    karar_veren: ben.id, karar_tarihi: new Date().toISOString()
+  }).eq("id", talep.id);
+  talepleriAc();
+}
+
+/* =====================================================================
+   YÖNETİM PANELİ — kullanıcılar, yetkiler, modüller
+   ===================================================================== */
+
+function yonetici() {
+  if (!ben) return false;
+  return ben.gorev === "baskan" || ben.gorev === "mudur";
+}
+const tamYetkili = () => ben && ben.kol === "erkek" && (ben.gorev === "baskan" || ben.gorev === "mudur");
+
+// Kullanıcı oluştururken oturumumuzun bozulmaması için ayrı bir bağlantı
+const sbKayit = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, storageKey: "sk_kayit" }
+});
+
+function sifreUret() {
+  const harf = "abcdefghjkmnpqrstuvwxyz", buyuk = "ABCDEFGHJKLMNPQRSTUVWXYZ", rakam = "23456789";
+  const hepsi = harf + buyuk + rakam;
+  let s = harf[Math.floor(Math.random()*harf.length)] + buyuk[Math.floor(Math.random()*buyuk.length)];
+  for (let i = 0; i < 6; i++) s += hepsi[Math.floor(Math.random()*hepsi.length)];
+  return s + rakam[Math.floor(Math.random()*rakam.length)];
+}
+
+async function yonetimAc() {
+  aktifModul = null;
+  menuIsaretle("yonetim");
+  $("modul-ad").textContent = "Yönetim";
+  $("modul-aciklama").textContent = "Kullanıcılar, yetkiler ve modüller";
+  $("ozet").classList.add("gizli");
+  $("ekle-btn").classList.add("gizli");
+  $("ara").classList.add("gizli");
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+
+  const [{ data: kullar }, { data: mods }] = await Promise.all([
+    sb.from("kullanicilar").select("*").order("kol").order("gorev"),
+    sb.from("moduller").select("*").order("sira")
+  ]);
+
+  $("icerik").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px">
+      <h2 style="font-size:15px">Kullanıcılar (${(kullar||[]).length})</h2>
+      ${tamYetkili() ? `<button class="btn kucuk" id="kul-ekle">+ Kullanıcı Ekle</button>` : ""}
+    </div>
+    <div class="tablo-kutu"><table>
+      <thead><tr><th>Ad Soyad</th><th>Kol</th><th>Görev</th><th>Durum</th><th class="sag">İşlem</th></tr></thead>
+      <tbody>${(kullar||[]).map(k => `<tr>
+        <td><b>${k.ad_soyad}</b></td>
+        <td>${KOL_AD[k.kol]}</td>
+        <td>${GOREV_AD[k.gorev]}</td>
+        <td><span class="rozet ${k.aktif ? "kapali" : "acik"}">${k.aktif ? "Aktif" : "Kapalı"}</span></td>
+        <td class="sag">
+          <button class="btn ikincil kucuk" data-yetki="${k.id}">Yetkiler</button>
+          ${tamYetkili() && k.id !== ben.id
+            ? `<button class="btn ikincil kucuk" data-durum="${k.id}">${k.aktif ? "Kapat" : "Aç"}</button>` : ""}
+        </td></tr>`).join("")}</tbody></table></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:26px 0 12px">
+      <h2 style="font-size:15px">Modüller (${(mods||[]).length})</h2>
+      ${tamYetkili() ? `<button class="btn kucuk" id="mod-ekle">+ Modül Ekle</button>` : ""}
+    </div>
+    <div class="tablo-kutu"><table>
+      <thead><tr><th>Modül Adı</th><th>Kol</th><th>Sorumlu Görev</th><th>Durum</th><th class="sag">İşlem</th></tr></thead>
+      <tbody>${(mods||[]).map(m => `<tr>
+        <td><b>${m.ad}</b><span class="meta" style="display:block;font-size:11px;color:var(--soluk)">${m.kod}</span></td>
+        <td>${m.kol ? KOL_AD[m.kol] : "Ortak"}</td>
+        <td>${m.sahip_gorev ? GOREV_AD[m.sahip_gorev] : "—"}</td>
+        <td><span class="rozet ${m.aktif ? "kapali" : "acik"}">${m.aktif ? "Açık" : "Kapalı"}</span></td>
+        <td class="sag">${tamYetkili()
+          ? `<button class="btn ikincil kucuk" data-mdurum="${m.id}">${m.aktif ? "Kapat" : "Aç"}</button>` : "—"}</td>
+      </tr>`).join("")}</tbody></table></div>`;
+
+  if ($("kul-ekle")) $("kul-ekle").onclick = kullaniciEkleFormu;
+  if ($("mod-ekle")) $("mod-ekle").onclick = modulEkleFormu;
+  $("icerik").querySelectorAll("[data-yetki]").forEach(b =>
+    b.onclick = () => yetkiFormu(kullar.find(k => k.id === b.dataset.yetki), mods));
+  $("icerik").querySelectorAll("[data-durum]").forEach(b =>
+    b.onclick = async () => {
+      const k = kullar.find(x => x.id === b.dataset.durum);
+      await sb.from("kullanicilar").update({ aktif: !k.aktif }).eq("id", k.id);
+      yonetimAc();
+    });
+  $("icerik").querySelectorAll("[data-mdurum]").forEach(b =>
+    b.onclick = async () => {
+      const m = mods.find(x => x.id === b.dataset.mdurum);
+      await sb.from("moduller").update({ aktif: !m.aktif }).eq("id", m.id);
+      await modulleriYukle(); yonetimAc();
+    });
+}
+
+/* ---------------- KULLANICI EKLE ---------------- */
+function kullaniciEkleFormu() {
+  $("form-baslik").textContent = "Yeni Kullanıcı";
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Ad Soyad *</label><input id="y-ad" placeholder="Ahmet Yılmaz"></div>
+    <div class="alan genis"><label>E-posta *</label><input id="y-eposta" type="email" placeholder="ahmet@ornek.com"></div>
+    <div class="alan"><label>Kol *</label><select id="y-kol">
+      <option value="erkek">Erkek Kolu</option><option value="kadin">Kadın Kolu</option></select></div>
+    <div class="alan"><label>Görev *</label><select id="y-gorev">
+      <option value="baskan">Başkan</option><option value="mudur">Müdür</option>
+      <option value="ticaret">Ticaret</option><option value="sosyal">Sosyal</option>
+      <option value="dergi">Dergi</option><option value="vekil">Vekil</option></select></div>
+    <div class="alan genis"><label>Şifre *</label>
+      <div style="display:flex;gap:8px"><input id="y-sifre" value="${sifreUret()}">
+      <button class="btn ikincil kucuk" id="y-yeni-sifre" style="white-space:nowrap">Yenile</button></div>
+      <div style="font-size:11.5px;color:var(--soluk);margin-top:5px">
+        Bu şifreyi kullanıcıya ilet. Kaydettikten sonra bir daha görüntülenemez.</div></div>`;
+  $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
+  $("y-yeni-sifre").onclick = () => { $("y-sifre").value = sifreUret(); };
+  $("form-kaydet").onclick = kullaniciKaydet;
+  $("perde").classList.remove("gizli");
+}
+
+async function kullaniciKaydet() {
+  const ad = $("y-ad").value.trim(), eposta = $("y-eposta").value.trim();
+  const kol = $("y-kol").value, gorev = $("y-gorev").value, sifre = $("y-sifre").value;
+  if (!ad || !eposta || sifre.length < 6) { alert("Ad, e-posta ve en az 6 karakter şifre gerekli."); return; }
+
+  $("form-kaydet").textContent = "Oluşturuluyor…";
+  const { data, error } = await sbKayit.auth.signUp({ email: eposta, password: sifre });
+  if (error) { $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
+    alert("Hesap açılamadı: " + error.message); return; }
+
+  const { error: e2 } = await sb.from("kullanicilar")
+    .insert({ id: data.user.id, ad_soyad: ad, kol, gorev });
+  $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
+  if (e2) { alert("Hesap açıldı ama yetki kaydı yapılamadı: " + e2.message); return; }
+
+  await sbKayit.auth.signOut();
+  $("perde").classList.add("gizli");
+  alert(`Kullanıcı oluşturuldu.\n\nAd: ${ad}\nE-posta: ${eposta}\nŞifre: ${sifre}\n\nBu bilgileri kullanıcıya ilet. Şifre bir daha gösterilmeyecek.`);
+  yonetimAc();
+}
+
+/* ---------------- YETKİLER ---------------- */
+async function yetkiFormu(kul, mods) {
+  const { data: izinler } = await sb.from("modul_izinleri")
+    .select("*").eq("kullanici_id", kul.id);
+  const izin = Object.fromEntries((izinler || []).map(i => [i.modul_id, i]));
+  const uygun = mods.filter(m => !m.kol || m.kol === kul.kol);
+  const ustYonetim = (kul.gorev === "baskan" || kul.gorev === "mudur");
+  const salt = kul.gorev === "vekil";
+
+  $("form-baslik").textContent = `Yetkiler — ${kul.ad_soyad}`;
+  $("form-govde").innerHTML = `
+    <div class="genis" style="font-size:12.5px;color:var(--soluk);background:#E8F6F6;
+      padding:11px 13px;border-radius:7px;line-height:1.5">
+      ${ustYonetim
+        ? `<b>${GOREV_AD[kul.gorev]}</b> olduğu için ${kul.kol === "erkek" ? "tüm" : "kadın kolunun tüm"} modüllerine zaten erişir. Aşağıdaki tikler ek yetkidir.`
+        : salt
+        ? `<b>Vekil</b> yalnızca okuyabilir. Yazma tiki koysan da sistem yazmaya izin vermez.`
+        : `<b>${GOREV_AD[kul.gorev]}</b> kendi sorumluluğundaki modüle zaten erişir. Diğerleri için aşağıdan yetki ver.`}
+    </div>
+    <div class="genis"><table style="min-width:0;font-size:12.5px">
+      <thead><tr><th>Modül</th><th style="text-align:center">Görür</th>
+      <th style="text-align:center">Yazar</th><th style="text-align:center">Siler</th></tr></thead>
+      <tbody>${uygun.map(m => {
+        const i = izin[m.id] || {};
+        return `<tr><td>${m.ad}${m.kol === "kadin" ? " <span style='color:var(--soluk)'>(K)</span>" : ""}</td>
+        <td style="text-align:center"><input type="checkbox" style="width:auto" data-o="${m.id}" ${i.okuyabilir ? "checked" : ""}></td>
+        <td style="text-align:center"><input type="checkbox" style="width:auto" data-y="${m.id}" ${i.yazabilir ? "checked" : ""} ${salt ? "disabled" : ""}></td>
+        <td style="text-align:center"><input type="checkbox" style="width:auto" data-s="${m.id}" ${i.silebilir ? "checked" : ""} ${salt ? "disabled" : ""}></td>
+        </tr>`; }).join("")}</tbody></table></div>`;
+  $("form-kaydet").textContent = "Yetkileri Kaydet";
+  $("form-kaydet").onclick = async () => {
+    $("form-kaydet").textContent = "Kaydediliyor…";
+    const satirlar = uygun.map(m => ({
+      kullanici_id: kul.id, modul_id: m.id, veren_id: ben.id,
+      okuyabilir: $("form-govde").querySelector(`[data-o="${m.id}"]`).checked,
+      yazabilir:  $("form-govde").querySelector(`[data-y="${m.id}"]`).checked,
+      silebilir:  $("form-govde").querySelector(`[data-s="${m.id}"]`).checked
+    })).filter(s => s.okuyabilir || s.yazabilir || s.silebilir);
+
+    await sb.from("modul_izinleri").delete().eq("kullanici_id", kul.id);
+    if (satirlar.length) {
+      const { error } = await sb.from("modul_izinleri").insert(satirlar);
+      if (error) { alert("Kaydedilemedi: " + error.message);
+        $("form-kaydet").textContent = "Yetkileri Kaydet"; return; }
+    }
+    $("form-kaydet").textContent = "Yetkileri Kaydet";
+    $("perde").classList.add("gizli");
+  };
+  $("perde").classList.remove("gizli");
+}
+
+/* ---------------- MODÜL EKLE ---------------- */
+function modulEkleFormu() {
+  $("form-baslik").textContent = "Yeni Modül";
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Modül Adı *</label><input id="m-ad" placeholder="Aidat Ödemeleri"></div>
+    <div class="alan"><label>Hangi Kol *</label><select id="m-kol">
+      <option value="">Ortak (ikisi de görür)</option>
+      <option value="erkek">Erkek Kolu</option><option value="kadin">Kadın Kolu</option></select></div>
+    <div class="alan"><label>Sorumlu Görev</label><select id="m-gorev">
+      <option value="">Yok</option><option value="mudur">Müdür</option>
+      <option value="ticaret">Ticaret</option><option value="sosyal">Sosyal</option>
+      <option value="dergi">Dergi</option></select></div>
+    <div class="alan genis"><label>Alanlar</label>
+      <div id="m-alanlar"></div>
+      <button class="btn ikincil kucuk" id="m-alan-ekle" style="margin-top:8px">+ Alan Ekle</button></div>`;
+  $("form-kaydet").textContent = "Modülü Oluştur";
+  const kap = $("m-alanlar");
+  const alanSatiri = () => {
+    const d = document.createElement("div");
+    d.style.cssText = "display:flex;gap:6px;margin-bottom:6px";
+    d.innerHTML = `<input placeholder="Alan adı (örn. Tutar)" class="m-etiket">
+      <select class="m-tip" style="width:130px">
+        <option value="metin">Metin</option><option value="para">Para</option>
+        <option value="sayi">Sayı</option><option value="tarih">Tarih</option>
+        <option value="uzun_metin">Uzun Metin</option></select>
+      <button class="btn ikincil kucuk" style="white-space:nowrap">Sil</button>`;
+    d.querySelector("button").onclick = () => d.remove();
+    kap.appendChild(d);
+  };
+  ["Tarih","Açıklama","Tutar"].forEach(() => alanSatiri());
+  [...kap.querySelectorAll(".m-etiket")].forEach((el,i) => el.value = ["Tarih","Açıklama","Tutar"][i]);
+  [...kap.querySelectorAll(".m-tip")].forEach((el,i) => el.value = ["tarih","metin","para"][i]);
+  $("m-alan-ekle").onclick = alanSatiri;
+
+  $("form-kaydet").onclick = async () => {
+    const ad = $("m-ad").value.trim();
+    if (!ad) { alert("Modül adı gerekli."); return; }
+    const kod = ad.toLowerCase()
+      .replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s").replace(/ı/g,"i")
+      .replace(/ö/g,"o").replace(/ç/g,"c").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")
+      + "_" + Math.random().toString(36).slice(2,5);
+
+    $("form-kaydet").textContent = "Oluşturuluyor…";
+    const { data: m, error } = await sb.from("moduller").insert({
+      kod, ad, kol: $("m-kol").value || null,
+      sahip_gorev: $("m-gorev").value || null, sira: 200
+    }).select().single();
+    if (error) { alert("Oluşturulamadı: " + error.message);
+      $("form-kaydet").textContent = "Modülü Oluştur"; return; }
+
+    const satirlar = [...kap.children].map((d, i) => {
+      const et = d.querySelector(".m-etiket").value.trim();
+      if (!et) return null;
+      return { modul_id: m.id, etiket: et, tip: d.querySelector(".m-tip").value,
+        sira: (i+1)*10, kod: et.toLowerCase()
+          .replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s").replace(/ı/g,"i")
+          .replace(/ö/g,"o").replace(/ç/g,"c").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"") || ("alan"+i) };
+    }).filter(Boolean);
+    if (satirlar.length) await sb.from("modul_alanlari").insert(satirlar);
+
+    $("form-kaydet").textContent = "Modülü Oluştur";
+    $("perde").classList.add("gizli");
+    await modulleriYukle(); yonetimAc();
+  };
+  $("perde").classList.remove("gizli");
+}
+
+</script>
+</body>
+</html>
