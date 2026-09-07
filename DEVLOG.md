@@ -11,7 +11,8 @@ Son güncelleme: 7 Eylül 2026
 2. ✅ `02_ilk_kurulum.sql` çalıştırıldı ve ilk Müdür hesabı açıldı.
 3. ✅ `server.js` yerel geliştirme sunucusu kuruldu (`http://localhost:3000` aktif).
 4. ✅ Excel çek ve ödeme verileri (`03_excel_verileri.sql`) UTF-8 Türkçe desteğiyle veritabanına aktarıldı.
-5. ⏳ **Supabase Uyku Modu (Paused):** 7 günden fazla işlem yapılmadığı için Supabase projesi uykuya geçti. Panelden "Restore" edilmesi gerekiyor.
+5. ✅ Supabase projesi uyandırıldı, Müdür şifresi SQL ile yenilendi, giriş çalışıyor.
+7. ✅ **Kira Takip paneli** eklendi (`04_kira_modulu.sql` + `index.html`). SQL'in Supabase'de çalıştırılması gerekiyor.
 6. ✅ **GitHub:** Proje Git kontrolüne alındı, SSH ile `https://github.com/kaanozcan4-star/vakif-takip` deposuna başarıyla yüklendi.
 
 ---
@@ -56,9 +57,15 @@ Son güncelleme: 7 Eylül 2026
 
 ---
 
+### 8. Kira Takip Paneli (7 Eylül 2026) ✅
+- `04_kira_modulu.sql`: `kira` modülü, 4 dergah kaydı, her dergah için son 12 ayın ödemesi (Erol Kaan Özcan, ayın 5'i).
+- `index.html`: dergah kartları + vadeye göre dolan çubuk, 12 aylık "kim ödedi" tablosu, tüm ödeme listesi, ödeme kaydet/düzenle/sil, dergah ekle/düzenle, yetkisizler için talep akışı.
+- Kira tutarları bilinmiyor, panelden girilecek.
+
 ## KALAN VE DEVAM EDEN İŞLER
 
-1. ⬜ **Supabase Projesini Uyandırmak:** Panel üzerinden `Restore project` butonuna basılması.
-2. ⬜ **Şifre Eşitleme:** Gerekirse SQL Editor üzerinden şifrenin güncellenmesi.
+1. ✅ Supabase projesi uyandırıldı (Resume project).
+2. ✅ Şifre SQL Editor üzerinden yenilendi.
+5. ⬜ **Kira modülü SQL'i:** `04_kira_modulu.sql` Supabase SQL Editor'da çalıştırılacak, sonra kira tutarları panelden girilecek.
 3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.
 4. ⬜ **Netlify Yayını:** Dosyaların `app.netlify.com/drop` veya GitHub entegrasyonuyla canlıya alınması.

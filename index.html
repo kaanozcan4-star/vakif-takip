@@ -98,6 +98,36 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
 .rozet.red{background:#FBEAE7;color:var(--kirmizi)}
 .bos{padding:44px 20px;text-align:center;color:var(--soluk);font-size:13.5px}
 
+/* ---------- KİRA PANELİ ---------- */
+.kira-kartlar{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-bottom:22px}
+.kira-kart{background:var(--kart);border:1px solid var(--cizgi);border-radius:10px;padding:16px 18px;
+  display:flex;flex-direction:column;gap:9px;border-top:4px solid var(--yesil-3)}
+.kira-kart.uyari{border-top-color:#E0A526}
+.kira-kart.gecikti{border-top-color:var(--kirmizi);background:#FFF8F6}
+.kira-kart.odendi{border-top-color:#2E9E5B}
+.kira-kart h3{font-size:15px;line-height:1.3}
+.kira-kart .adres{font-size:12px;color:var(--soluk);margin-top:-6px}
+.kira-kart .tutar{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.kira-kart .tutar small{font-size:11px;font-weight:600;color:var(--soluk);margin-left:4px}
+.cubuk{height:12px;background:#E3EEEE;border-radius:20px;overflow:hidden}
+.cubuk div{height:100%;border-radius:20px;background:var(--yesil-3);transition:width .4s}
+.kira-kart.uyari .cubuk div{background:#E0A526}
+.kira-kart.gecikti .cubuk div{background:var(--kirmizi)}
+.kira-kart.odendi .cubuk div{background:#2E9E5B}
+.kira-durum{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600}
+.kira-durum .gun{font-size:15px}
+.kira-kart.gecikti .kira-durum{color:var(--kirmizi)}
+.kira-kart.odendi .kira-durum{color:#2E9E5B}
+.kira-son{font-size:12px;color:var(--soluk);border-top:1px dashed var(--cizgi);padding-top:8px}
+.kira-son b{color:var(--murekkep)}
+.kira-kart .islem{display:flex;gap:7px;margin-top:2px}
+.kira-bolum{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--soluk);
+  font-weight:700;margin:22px 0 10px}
+.kira-bolum:first-child{margin-top:0}
+.tik{color:#2E9E5B;font-weight:700}
+.eksik{color:var(--kirmizi);font-weight:700}
+.hucre-alt{display:block;font-size:11px;color:var(--soluk);font-weight:400}
+
 /* ---------- FORM PENCERESİ ---------- */
 .perde{position:fixed;inset:0;background:rgba(6,48,52,.58);display:grid;place-items:center;
   padding:20px;z-index:50;overflow-y:auto}
@@ -318,14 +348,21 @@ async function modulleriYukle() {
   $("menu").querySelectorAll("button").forEach(b => {
     b.onclick = () => b.dataset.id === "talepler" ? talepleriAc()
                     : b.dataset.id === "yonetim"  ? yonetimAc()
-                    : modulAc(b.dataset.id);
+                    : modulSec(b.dataset.id);
   });
 
-  if (moduller.length) modulAc(moduller[0].id);
+  if (moduller.length) modulSec(moduller[0].id);
   else $("icerik").innerHTML = `<div class="bos">Görebileceğiniz modül yok. Müdürden yetki isteyin.</div>`;
 }
 
 /* ---------------- MODÜL ---------------- */
+// Özel paneli olan modüller (kod'a göre) kendi ekranını açar, gerisi genel tablo
+function modulSec(id) {
+  const m = moduller.find(x => x.id === id);
+  if (m?.kod === "kira") return kiraAc(m);
+  return modulAc(id);
+}
+
 async function modulAc(id) {
   aktifModul = moduller.find(m => m.id === id);
   if (!aktifModul) return;
@@ -345,6 +382,7 @@ async function modulAc(id) {
   yazabilir = !!y; silebilir = !!s; alanlar = al || []; kayitlar = kay || [];
   $("ekle-btn").textContent = yazabilir ? "+ Yeni Kayıt" : "+ Talep Oluştur";
   $("ekle-btn").classList.remove("gizli");
+  $("ekle-btn").onclick = () => formAc(null);   // özel paneller bunu değiştirmiş olabilir
   ozetCiz();
   tabloCiz();
 }
@@ -413,7 +451,7 @@ function tabloCiz() {
     b.onclick = () => kayitSil(b.dataset.sil));
 }
 
-$("ara").oninput = () => { if (aktifModul) tabloCiz(); };
+$("ara").oninput = () => { if (aktifModul && aktifModul.kod !== "kira") tabloCiz(); };
 
 /* ---------------- FORM ---------------- */
 $("ekle-btn").onclick = () => formAc(null);
@@ -545,8 +583,8 @@ async function talepKarar(talep, onay) {
   if (onay && talep.tip === "ekleme") {
     const m = moduller.find(x => x.id === talep.modul_id);
     const { error } = await sb.from("kayitlar").insert({
-      modul_id: talep.modul_id, kol: m?.kol || ben.kol,
-      veri: talep.veri, baslik: talep.veri.aciklama || null, olusturan: talep.olusturan
+      modul_id: talep.modul_id, kol: talep.veri.kol || m?.kol || ben.kol,
+      veri: talep.veri, baslik: talep.veri.baslik || talep.veri.aciklama || null, olusturan: talep.olusturan
     });
     if (error) { alert("Kayıt oluşturulamadı: " + error.message); return; }
   }
@@ -561,6 +599,261 @@ async function talepKarar(talep, onay) {
     karar_veren: ben.id, karar_tarihi: new Date().toISOString()
   }).eq("id", talep.id);
   talepleriAc();
+}
+
+/* =====================================================================
+   KİRA PANELİ — dergah kiraları, vade çubuğu, ödeme kaydı
+   Veri: kayitlar tablosunda, kira modülünde.
+     veri.tip = 'yer'   → dergah (ad, adres, tutar, vade_gunu, sira, aktif)
+     veri.tip = 'odeme' → ödeme (yer_id, donem 'YYYY-MM', tarih, tutar, odeyen, not_metni)
+   ===================================================================== */
+let kiraModul = null, kiraYerler = [], kiraOdemeler = [];
+const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const kacir = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const donemYaz = d => { if (!d) return "—"; const [y, a] = d.split("-"); return `${AYLAR[Number(a)-1] || a} ${y}`; };
+const donemStr = t => `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`;
+const donemKaydir = (d, n) => { const [y, a] = d.split("-").map(Number); return donemStr(new Date(y, a-1+n, 1)); };
+const vadeTarihi = (d, gun) => { const [y, a] = d.split("-").map(Number); return new Date(y, a-1, gun || 5); };
+
+function kiraDurum(yer) {
+  const bugun = new Date(); bugun.setHours(0,0,0,0);
+  const gun = Number(yer.veri.vade_gunu) || 5;
+  const buDonem = donemStr(bugun);
+  const buAyOdendi = kiraOdemeler.some(o => o.veri.yer_id === yer.id && o.veri.donem === buDonem);
+  const hedef = buAyOdendi ? donemKaydir(buDonem, 1) : buDonem;
+  const vade = vadeTarihi(hedef, gun);
+  const bas = vadeTarihi(donemKaydir(hedef, -1), gun);
+  const pct = Math.max(0, Math.min(100, (bugun - bas) / (vade - bas) * 100));
+  const kalan = Math.round((vade - bugun) / 86400000);
+  let sinif, gunMetni;
+  if (buAyOdendi)     { sinif = "odendi";  gunMetni = kalan === 0 ? "Bugün" : `${kalan} gün kaldı`; }
+  else if (kalan < 0) { sinif = "gecikti"; gunMetni = `${-kalan} gün gecikti`; }
+  else if (kalan === 0){ sinif = "gecikti"; gunMetni = "BUGÜN son gün"; }
+  else                { sinif = pct >= 75 ? "uyari" : ""; gunMetni = `${kalan} gün kaldı`; }
+  return { buDonem, buAyOdendi, hedef, vade, pct: buAyOdendi ? pct : Math.max(pct, 3), kalan, sinif, gunMetni };
+}
+
+async function kiraAc(m) {
+  aktifModul = m; kiraModul = m;
+  menuIsaretle(m.id);
+  $("modul-ad").textContent = m.ad;
+  $("modul-aciklama").textContent = m.aciklama || "Dergah kiraları — her ayın 5'i";
+  $("ara").classList.add("gizli");
+  $("ozet").classList.add("gizli");
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+
+  const [{ data: y }, { data: s }, { data: kay, error }] = await Promise.all([
+    sb.rpc("modul_yazabilir", { p_modul: m.id }),
+    sb.rpc("modul_silebilir", { p_modul: m.id }),
+    sb.from("kayitlar").select("*, kullanicilar!kayitlar_olusturan_fkey(ad_soyad)")
+      .eq("modul_id", m.id).order("olusturuldu", { ascending: false })
+  ]);
+  if (error) { $("icerik").innerHTML = `<div class="bos">Yüklenemedi: ${kacir(error.message)}</div>`; return; }
+  yazabilir = !!y; silebilir = !!s;
+  const hepsi = kay || [];
+  kiraYerler = hepsi.filter(k => k.veri.tip === "yer")
+    .sort((a, b) => (Number(a.veri.sira)||99) - (Number(b.veri.sira)||99) || a.veri.ad.localeCompare(b.veri.ad, "tr"));
+  kiraOdemeler = hepsi.filter(k => k.veri.tip === "odeme")
+    .sort((a, b) => (b.veri.donem||"").localeCompare(a.veri.donem||"") || (b.veri.tarih||"").localeCompare(a.veri.tarih||""));
+
+  $("ekle-btn").textContent = yazabilir ? "+ Ödeme Kaydet" : "+ Ödeme Talebi";
+  $("ekle-btn").classList.remove("gizli");
+  $("ekle-btn").onclick = () => kiraOdemeFormu(null, null);
+  kiraCiz();
+}
+
+function kiraCiz() {
+  const aktifYerler = kiraYerler.filter(y => y.veri.aktif !== false);
+  if (!aktifYerler.length) {
+    $("icerik").innerHTML = `<div class="tablo-kutu"><div class="bos">Henüz dergah tanımlı değil.
+      ${yazabilir ? `<br><br><button class="btn" id="yer-ekle">+ Dergah Ekle</button>` : ""}</div></div>`;
+    if (yazabilir) $("yer-ekle").onclick = () => kiraYerFormu(null);
+    return;
+  }
+  const durumlar = aktifYerler.map(y => ({ yer: y, d: kiraDurum(y) }));
+
+  // --- özet şeridi
+  const toplamKira = aktifYerler.reduce((s, y) => s + (Number(y.veri.tutar) || 0), 0);
+  const odenen = durumlar.filter(x => x.d.buAyOdendi).length;
+  const geciken = durumlar.filter(x => x.d.sinif === "gecikti").length;
+  $("ozet").innerHTML = `
+    <div><div class="k">Dergah</div><div class="v">${aktifYerler.length}</div></div>
+    <div><div class="k">Aylık Toplam Kira</div><div class="v">${toplamKira ? paraYaz(toplamKira) : "—"}</div></div>
+    <div><div class="k">Bu Ay Ödenen</div><div class="v" style="color:#2E9E5B">${odenen} / ${aktifYerler.length}</div></div>
+    <div><div class="k">Geciken</div><div class="v" style="color:${geciken ? "var(--kirmizi)" : "inherit"}">${geciken}</div></div>`;
+  $("ozet").classList.remove("gizli");
+
+  // --- kartlar
+  const kartlar = durumlar.map(({ yer, d }) => {
+    const v = yer.veri;
+    const son = kiraOdemeler.find(o => o.veri.yer_id === yer.id);
+    return `<div class="kira-kart ${d.sinif}">
+      <h3>${kacir(v.ad)}</h3>
+      ${v.adres ? `<div class="adres">${kacir(v.adres)}</div>` : ""}
+      <div class="tutar">${v.tutar ? paraYaz(v.tutar) : `<span style="color:var(--soluk);font-size:14px">Tutar girilmedi</span>`}<small>/ ay · her ayın ${v.vade_gunu || 5}'i</small></div>
+      <div class="cubuk"><div style="width:${d.pct.toFixed(0)}%"></div></div>
+      <div class="kira-durum">
+        <span>${d.buAyOdendi ? `✓ ${donemYaz(d.buDonem)} ödendi` : `${donemYaz(d.hedef)} kirası`}</span>
+        <span class="gun">${d.gunMetni}</span>
+      </div>
+      <div style="font-size:12px;color:var(--soluk)">Vade: ${tarihYaz(d.vade)}</div>
+      <div class="kira-son">${son
+        ? `Son ödeme: <b>${donemYaz(son.veri.donem)}</b> · ${tarihYaz(son.veri.tarih)} · <b>${kacir(son.veri.odeyen)}</b>${son.veri.tutar ? " · " + paraYaz(son.veri.tutar) : ""}`
+        : "Henüz ödeme kaydı yok"}</div>
+      <div class="islem">
+        <button class="btn kucuk" data-ode="${yer.id}">${yazabilir ? "Ödeme Kaydet" : "Ödeme Talebi"}</button>
+        ${yazabilir ? `<button class="btn ikincil kucuk" data-yer="${yer.id}">Düzenle</button>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+
+  // --- 12 aylık tablo
+  const bugun = new Date();
+  const donemler = Array.from({ length: 12 }, (_, i) => donemKaydir(donemStr(bugun), -i));
+  const buDonem = donemStr(bugun);
+  const gecmis = `<div class="tablo-kutu"><table>
+    <thead><tr><th>Dönem</th>${aktifYerler.map(y => `<th>${kacir(y.veri.ad)}</th>`).join("")}</tr></thead>
+    <tbody>${donemler.map(dn => `<tr><td><b>${donemYaz(dn)}</b></td>${aktifYerler.map(y => {
+      const o = kiraOdemeler.find(x => x.veri.yer_id === y.id && x.veri.donem === dn);
+      if (o) return `<td><span class="tik">✓</span> ${kacir(o.veri.odeyen)}<span class="hucre-alt">${tarihYaz(o.veri.tarih)}${o.veri.tutar ? " · " + paraYaz(o.veri.tutar) : ""}</span></td>`;
+      if (dn === buDonem) { const d = kiraDurum(y); return `<td><span class="${d.sinif === "gecikti" ? "eksik" : ""}" style="${d.sinif !== "gecikti" ? "color:#8A6410;font-weight:600" : ""}">${d.sinif === "gecikti" ? "Gecikti" : "Bekliyor"}</span></td>`; }
+      return `<td><span class="eksik">Ödenmedi</span></td>`;
+    }).join("")}</tr>`).join("")}</tbody></table></div>`;
+
+  // --- tüm ödemeler
+  const yerAd = id => kiraYerler.find(y => y.id === id)?.veri.ad || "—";
+  const liste = kiraOdemeler.length ? `<div class="tablo-kutu"><table>
+    <thead><tr><th>Dönem</th><th>Dergah</th><th>Ödeme Tarihi</th><th class="sag">Tutar</th><th>Ödeyen</th><th>Kaydeden</th><th>Not</th><th class="sag">İşlem</th></tr></thead>
+    <tbody>${kiraOdemeler.map(o => `<tr>
+      <td>${donemYaz(o.veri.donem)}</td><td>${kacir(yerAd(o.veri.yer_id))}</td><td>${tarihYaz(o.veri.tarih)}</td>
+      <td class="sag">${o.veri.tutar ? paraYaz(o.veri.tutar) : "—"}</td>
+      <td><b>${kacir(o.veri.odeyen)}</b></td>
+      <td>${kacir(o.kullanicilar?.ad_soyad || "—")}<span class="hucre-alt">${tarihYaz(o.olusturuldu)}</span></td>
+      <td style="font-size:12px;color:var(--soluk)">${kacir(o.veri.not_metni || "")}</td>
+      <td class="sag">
+        ${yazabilir ? `<button class="btn ikincil kucuk" data-odeme-duzenle="${o.id}">Düzenle</button>` : ""}
+        ${silebilir ? `<button class="btn tehlike kucuk" data-odeme-sil="${o.id}">Sil</button>` : ""}
+        ${!yazabilir && !silebilir ? "—" : ""}
+      </td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="tablo-kutu"><div class="bos">Henüz ödeme kaydı yok.</div></div>`;
+
+  $("icerik").innerHTML = `
+    <div class="kira-bolum">Dergahlar ve Vade Durumu</div>
+    <div class="kira-kartlar">${kartlar}</div>
+    ${yazabilir ? `<button class="btn ikincil kucuk" id="yer-ekle" style="margin-top:-10px;margin-bottom:8px">+ Dergah Ekle</button>` : ""}
+    <div class="kira-bolum">Son 12 Ay — Kim Ödedi</div>${gecmis}
+    <div class="kira-bolum">Tüm Ödeme Kayıtları</div>${liste}`;
+
+  $("icerik").querySelectorAll("[data-ode]").forEach(b =>
+    b.onclick = () => kiraOdemeFormu(kiraYerler.find(y => y.id === b.dataset.ode), null));
+  $("icerik").querySelectorAll("[data-yer]").forEach(b =>
+    b.onclick = () => kiraYerFormu(kiraYerler.find(y => y.id === b.dataset.yer)));
+  $("icerik").querySelectorAll("[data-odeme-duzenle]").forEach(b =>
+    b.onclick = () => { const o = kiraOdemeler.find(x => x.id === b.dataset.odemeDuzenle);
+      kiraOdemeFormu(kiraYerler.find(y => y.id === o.veri.yer_id), o); });
+  $("icerik").querySelectorAll("[data-odeme-sil]").forEach(b => b.onclick = () => kiraSil(b.dataset.odemeSil, "ödeme"));
+  const ye = $("yer-ekle"); if (ye) ye.onclick = () => kiraYerFormu(null);
+}
+
+/* --- ödeme formu (yeni / düzenle / talep) --- */
+function kiraOdemeFormu(yer, odeme) {
+  const aktifYerler = kiraYerler.filter(y => y.veri.aktif !== false);
+  if (!aktifYerler.length) { alert("Önce dergah tanımlayın."); return; }
+  const v = odeme?.veri || {};
+  const secili = yer?.id || v.yer_id || aktifYerler[0].id;
+  const bugun = new Date();
+  $("form-baslik").textContent = odeme ? "Ödemeyi Düzenle" : (yazabilir ? "Kira Ödemesi Kaydet" : "Kira Ödeme Talebi");
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Dergah <span style="color:var(--kirmizi)">*</span></label>
+      <select id="ko-yer">${aktifYerler.map(y => `<option value="${y.id}" ${y.id === secili ? "selected" : ""}>${kacir(y.veri.ad)}</option>`).join("")}</select></div>
+    <div class="alan"><label>Hangi ayın kirası <span style="color:var(--kirmizi)">*</span></label>
+      <input type="month" id="ko-donem" value="${v.donem || donemStr(bugun)}"></div>
+    <div class="alan"><label>Ödeme tarihi <span style="color:var(--kirmizi)">*</span></label>
+      <input type="date" id="ko-tarih" value="${v.tarih || `${donemStr(bugun)}-${String(bugun.getDate()).padStart(2,"0")}`}"></div>
+    <div class="alan"><label>Tutar (₺)</label>
+      <input type="number" step="0.01" id="ko-tutar" value="${v.tutar ?? ""}" placeholder="boş bırakılırsa dergahın kirası"></div>
+    <div class="alan"><label>Kim ödedi <span style="color:var(--kirmizi)">*</span></label>
+      <input type="text" id="ko-odeyen" value="${kacir(v.odeyen ?? ben.ad_soyad)}"></div>
+    <div class="alan genis"><label>Not</label><textarea rows="2" id="ko-not">${kacir(v.not_metni || "")}</textarea></div>`;
+  $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
+  $("form-kaydet").onclick = async () => {
+    const y = kiraYerler.find(x => x.id === $("ko-yer").value);
+    const donem = $("ko-donem").value, tarih = $("ko-tarih").value, odeyen = $("ko-odeyen").value.trim();
+    if (!y || !donem || !tarih || !odeyen) { alert("Dergah, dönem, tarih ve ödeyen zorunlu."); return; }
+    const tutarStr = $("ko-tutar").value;
+    const veri = { tip: "odeme", yer_id: y.id, donem, tarih, odeyen,
+      tutar: tutarStr !== "" ? Number(tutarStr) : (y.veri.tutar ?? null),
+      not_metni: $("ko-not").value.trim() || null };
+    const baslik = `${y.veri.ad} — ${donem}`;
+    if (!odeme) {
+      const cift = kiraOdemeler.find(o => o.veri.yer_id === y.id && o.veri.donem === donem);
+      if (cift && !confirm(`${y.veri.ad} için ${donemYaz(donem)} kirası zaten kayıtlı (${cift.veri.odeyen}). Yine de ekleyeyim mi?`)) return;
+    }
+    $("form-kaydet").textContent = "Kaydediliyor…";
+    let hata;
+    if (!yazabilir) {
+      ({ error: hata } = await sb.from("talepler").insert({
+        modul_id: kiraModul.id, tip: "ekleme", veri: { ...veri, kol: y.kol, baslik }, olusturan: ben.id }));
+    } else if (odeme) {
+      ({ error: hata } = await sb.from("kayitlar").update({ veri, baslik, kol: y.kol }).eq("id", odeme.id));
+    } else {
+      ({ error: hata } = await sb.from("kayitlar").insert({
+        modul_id: kiraModul.id, kol: y.kol, veri, baslik, olusturan: ben.id }));
+    }
+    $("form-kaydet").textContent = "Kaydet";
+    if (hata) { alert("Kaydedilemedi: " + hata.message); return; }
+    $("perde").classList.add("gizli");
+    if (!yazabilir) { alert("Talebiniz gönderildi. Yetkili onayına düştü."); return; }
+    kiraAc(kiraModul);
+  };
+  $("perde").classList.remove("gizli");
+}
+
+/* --- dergah formu (yeni / düzenle) --- */
+function kiraYerFormu(yer) {
+  const v = yer?.veri || {};
+  const kolSecilebilir = tamYetkili();
+  $("form-baslik").textContent = yer ? "Dergahı Düzenle" : "Yeni Dergah";
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Dergah adı <span style="color:var(--kirmizi)">*</span></label>
+      <input type="text" id="ky-ad" value="${kacir(v.ad || "")}"></div>
+    <div class="alan genis"><label>Adres / semt</label><input type="text" id="ky-adres" value="${kacir(v.adres || "")}"></div>
+    <div class="alan"><label>Aylık kira (₺)</label><input type="number" step="0.01" id="ky-tutar" value="${v.tutar ?? ""}"></div>
+    <div class="alan"><label>Ödeme günü (ayın kaçı)</label><input type="number" min="1" max="28" id="ky-gun" value="${v.vade_gunu || 5}"></div>
+    <div class="alan"><label>Kol</label>
+      <select id="ky-kol" ${kolSecilebilir ? "" : "disabled"}>
+        <option value="erkek" ${(yer?.kol || ben.kol) === "erkek" ? "selected" : ""}>Erkek Kolu</option>
+        <option value="kadin" ${(yer?.kol || ben.kol) === "kadin" ? "selected" : ""}>Kadın Kolu</option></select></div>
+    <div class="alan"><label>Durum</label>
+      <select id="ky-aktif"><option value="1" ${v.aktif !== false ? "selected" : ""}>Takip ediliyor</option>
+        <option value="0" ${v.aktif === false ? "selected" : ""}>Pasif (artık kira yok)</option></select></div>`;
+  $("form-kaydet").textContent = "Kaydet";
+  $("form-kaydet").onclick = async () => {
+    const ad = $("ky-ad").value.trim();
+    if (!ad) { alert("Dergah adı zorunlu."); return; }
+    const tutarStr = $("ky-tutar").value;
+    const veri = { tip: "yer", ad, adres: $("ky-adres").value.trim(),
+      tutar: tutarStr !== "" ? Number(tutarStr) : null,
+      vade_gunu: Number($("ky-gun").value) || 5,
+      sira: v.sira ?? (kiraYerler.length + 1), aktif: $("ky-aktif").value === "1" };
+    const kol = kolSecilebilir ? $("ky-kol").value : ben.kol;
+    $("form-kaydet").textContent = "Kaydediliyor…";
+    const { error } = yer
+      ? await sb.from("kayitlar").update({ veri, baslik: ad, kol }).eq("id", yer.id)
+      : await sb.from("kayitlar").insert({ modul_id: kiraModul.id, kol, veri, baslik: ad, olusturan: ben.id });
+    $("form-kaydet").textContent = "Kaydet";
+    if (error) { alert("Kaydedilemedi: " + error.message); return; }
+    $("perde").classList.add("gizli");
+    kiraAc(kiraModul);
+  };
+  $("perde").classList.remove("gizli");
+}
+
+async function kiraSil(id, ne) {
+  if (!confirm(`Bu ${ne} kaydı kalıcı olarak silinecek. Emin misiniz?`)) return;
+  const { error } = await sb.from("kayitlar").delete().eq("id", id);
+  if (error) { alert("Silinemedi: " + error.message); return; }
+  kiraAc(kiraModul);
 }
 
 /* =====================================================================

@@ -89,6 +89,16 @@ Kadın kolu: Borçlar/Alacaklar, Kermes Gelirleri, Sosyal Faaliyetler
 
 ---
 
+## Kira Takip Paneli (7 Eylül 2026)
+
+`kira` kodlu modül `index.html` içinde özel panelle açılır (`kiraAc`). Veri yine
+`kayitlar` tablosunda: `veri.tip='yer'` dergah, `veri.tip='odeme'` ödeme.
+Dergahlar: Erkek Merkez (Velibaba), Kadın Merkez, Aydos Kadın, Çınardere Kadın.
+Vade her ayın 5'i; kartlardaki çubuk vadeye yaklaştıkça dolar (turkuaz → sarı %75 →
+kırmızı gecikince → yeşil ödenince). Ödeme kaydında "kim ödedi" ve "kim kaydetti" ayrı tutulur.
+Kira tutarları henüz girilmedi; kartta "Düzenle" ile girilir.
+Yeni özel panel eklemek için: `modulSec()` içine kod eşlemesi + kendi `xAc()` fonksiyonu.
+
 ## Görsel Kimlik
 
 - Marka rengi: **#4BBFC2** (Semerkand logosundan piksel olarak ölçüldü)
@@ -107,6 +117,7 @@ Kadın kolu: Borçlar/Alacaklar, Kermes Gelirleri, Sosyal Faaliyetler
 | `01_vakif_semasi.sql` | Veritabanı kurulumu (bir kez çalıştırılır) |
 | `02_ilk_kurulum.sql` | İlk kullanıcının kendini Müdür yapması (bir kez) |
 | `03_excel_verileri.sql` | Excel verilerini veritabanına aktarma sorgusu (bir kez) |
+| `04_kira_modulu.sql` | Kira Takip modülü: 4 dergah + son 12 ayın ödemeleri (bir kez) |
 | `CLAUDE.md` | Bu dosya |
 | `DEVLOG.md` | Ne yapıldı, ne kaldı |
 
