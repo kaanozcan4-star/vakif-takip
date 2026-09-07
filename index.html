@@ -129,10 +129,24 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
 .eksik{color:var(--kirmizi);font-weight:700}
 .hucre-alt{display:block;font-size:11px;color:var(--soluk);font-weight:400}
 
+/* ---------- BORÇ / ALACAK ---------- */
+.filtreler{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filtre{padding:6px 12px;border-radius:20px;font-size:12.5px;font-weight:600;background:#fff;border:1px solid var(--cizgi);color:var(--soluk)}
+.filtre:hover{background:#E4EFEF}
+.filtre.aktif{background:var(--yesil);color:#fff;border-color:var(--yesil)}
+.yon{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.04em}
+.yon.borc{background:#FBEAE7;color:var(--kirmizi)}
+.yon.alacak{background:#E4F1E9;color:var(--yesil-2)}
+.ozet .alt{font-size:11.5px;color:var(--soluk);margin-top:2px}
+.detay-kutu{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;background:#F1F6F6;padding:12px 14px;border-radius:8px;font-size:13px}
+.detay-kutu .dt span{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--soluk);font-weight:700}
+.detay-kutu .dt:last-child{grid-column:1/-1}
+@media(max-width:760px){.detay-kutu{grid-template-columns:1fr}}
+
 /* ---------- FORM PENCERESİ ---------- */
 .perde{position:fixed;inset:0;background:rgba(6,48,52,.58);display:grid;place-items:center;
   padding:20px;z-index:50;overflow-y:auto}
-.pencere{background:var(--kart);width:100%;max-width:620px;border-radius:12px;
+.pencere{background:var(--kart);width:100%;max-width:760px;border-radius:12px;
   box-shadow:0 24px 60px rgba(0,0,0,.3);max-height:90vh;display:flex;flex-direction:column}
 .pencere-bas{padding:18px 22px;border-bottom:1px solid var(--cizgi);display:flex;
   justify-content:space-between;align-items:center}
@@ -361,6 +375,7 @@ async function modulleriYukle() {
 function modulSec(id) {
   const m = moduller.find(x => x.id === id);
   if (m?.kod === "kira") return kiraAc(m);
+  if (m && BORC_KODLARI.includes(m.kod)) return borcAc(m);
   return modulAc(id);
 }
 
@@ -452,7 +467,11 @@ function tabloCiz() {
     b.onclick = () => kayitSil(b.dataset.sil));
 }
 
-$("ara").oninput = () => { if (aktifModul && aktifModul.kod !== "kira") tabloCiz(); };
+$("ara").oninput = () => {
+  if (!aktifModul || aktifModul.kod === "kira") return;
+  if (BORC_KODLARI.includes(aktifModul.kod)) return borcCiz();
+  tabloCiz();
+};
 
 /* ---------------- FORM ---------------- */
 $("ekle-btn").onclick = () => formAc(null);
@@ -460,6 +479,7 @@ $("form-kapat").onclick = $("form-iptal").onclick = () => $("perde").classList.a
 
 function formAc(kayit) {
   duzenlenen = kayit;
+  borcPencereSifirla();
   $("form-kaydet").onclick = kayitKaydet;
   $("form-baslik").textContent = kayit ? "Kaydı Düzenle"
     : (yazabilir ? "Yeni Kayıt" : "Talep Oluştur");
@@ -759,6 +779,7 @@ function kiraCiz() {
 
 /* --- ödeme formu (yeni / düzenle / talep) --- */
 function kiraOdemeFormu(yer, odeme) {
+  borcPencereSifirla();
   const aktifYerler = kiraYerler.filter(y => y.veri.aktif !== false);
   if (!aktifYerler.length) { alert("Önce dergah tanımlayın."); return; }
   const v = odeme?.veri || {};
@@ -813,6 +834,7 @@ function kiraOdemeFormu(yer, odeme) {
 
 /* --- dergah formu (yeni / düzenle) --- */
 function kiraYerFormu(yer) {
+  borcPencereSifirla();
   const v = yer?.veri || {};
   const kolSecilebilir = tamYetkili();
   $("form-baslik").textContent = yer ? "Dergahı Düzenle" : "Yeni Dergah";
@@ -859,6 +881,357 @@ async function kiraSil(id, ne) {
   const { error } = await sb.from("kayitlar").delete().eq("id", id);
   if (error) { alert("Silinemedi: " + error.message); return; }
   kiraAc(kiraModul);
+}
+
+/* =====================================================================
+   BORÇ / ALACAK DEFTERİ — kimden ne alındı (TL, altın cinsi, döviz, çek),
+   vade, ve her borcun altında geri ödemeler (kim ödedi, ne ile, ne zaman)
+   Veri: kayitlar tablosunda, borclar / k_borclar modüllerinde.
+     veri.tip = 'borc'  → borç veya alacak kaydı
+     veri.tip = 'odeme' → o borca yapılan geri ödeme (borc_id)
+   ===================================================================== */
+const BORC_KODLARI = ["borclar", "k_borclar"];
+const KALEMLER = { tl:"Nakit TL", altin:"Altın", usd:"Dolar (USD)", eur:"Euro (EUR)", cek:"Çek", senet:"Senet", esya:"Eşya / Mal" };
+const ALTIN_CINSLERI = ["Çeyrek","Yarım","Tam","Ata","Cumhuriyet","Reşat","Gremse","Gram (24 ayar)","Gram (22 ayar)","Bilezik (gram)","Diğer"];
+const YONTEMLER = { nakit:"Nakit", havale:"Havale / EFT", altin:"Altın", doviz:"Döviz", mahsup:"Mahsup (gelirden düşüldü)", diger:"Diğer" };
+let borcModul = null, borcListe = [], borcOdemeler = [], borcFiltre = "tumu";
+
+// Eski (genel tablo) kayıtları yeni yapıya çevir — veritabanı değişmez, sadece ekranda
+function borcNormalize(k) {
+  const v = k.veri || {};
+  if (v.tip) return k;
+  return { ...k, veri: {
+    tip:"borc", yon:"borc", karsi_taraf: v.aciklama || k.baslik || "—", tarih: v.tarih,
+    kalem: (v.para_birimi || "TL").toLowerCase() === "altin" ? "altin" : (v.para_birimi || "TL").toLowerCase(),
+    miktar: v.toplam_birim ?? null, kur: v.kur ?? null, tutar_tl: Number(v.borc) || 0,
+    vade_tarihi: v.vade_tarihi, aciklama: v.aciklama, not_metni: v.not_metni, _eski_odenen: Number(v.odenen) || 0 } };
+}
+
+function borcHesap(b) {
+  const v = b.veri;
+  const od = borcOdemeler.filter(o => o.veri.borc_id === b.id);
+  const odenen = od.reduce((s, o) => s + (Number(o.veri.tutar_tl) || 0), 0) + (v._eski_odenen || 0);
+  const kalan = Math.max(0, (Number(v.tutar_tl) || 0) - odenen);
+  let miktarOdenen = null, miktarKalan = null;
+  if (v.kalem === "altin" && v.miktar) {
+    miktarOdenen = od.filter(o => o.veri.yontem === "altin" && o.veri.altin_cinsi === v.altin_cinsi)
+      .reduce((s, o) => s + (Number(o.veri.miktar) || 0), 0);
+    miktarKalan = Math.max(0, Number(v.miktar) - miktarOdenen);
+  } else if ((v.kalem === "usd" || v.kalem === "eur") && v.miktar) {
+    miktarOdenen = od.filter(o => o.veri.yontem === "doviz").reduce((s, o) => s + (Number(o.veri.miktar) || 0), 0);
+    miktarKalan = Math.max(0, Number(v.miktar) - miktarOdenen);
+  }
+  const bugun = new Date(); bugun.setHours(0,0,0,0);
+  const durum = kalan <= 0 ? "Kapandı" : odenen > 0 ? "Kısmi Ödendi" : "Açık";
+  const gecikti = durum !== "Kapandı" && v.vade_tarihi && new Date(v.vade_tarihi) < bugun;
+  return { od, odenen, kalan, miktarOdenen, miktarKalan, durum, gecikti };
+}
+
+const neAlindi = v => {
+  if (v.kalem === "altin") return `${v.miktar ? Number(v.miktar).toLocaleString("tr-TR") + " " : ""}${v.altin_cinsi || ""} altın`.trim();
+  if (v.kalem === "usd") return `${v.miktar ? Number(v.miktar).toLocaleString("tr-TR") : ""} $`;
+  if (v.kalem === "eur") return `${v.miktar ? Number(v.miktar).toLocaleString("tr-TR") : ""} €`;
+  if (v.kalem === "cek" || v.kalem === "senet") return `${KALEMLER[v.kalem]}${v.belge ? " · " + v.belge : ""}`;
+  return KALEMLER[v.kalem] || v.kalem || "—";
+};
+const neIle = v => {
+  if (v.yontem === "altin") return `${v.miktar || ""} ${v.altin_cinsi || ""} altın`.trim();
+  if (v.yontem === "doviz") return `${v.miktar || ""} döviz`.trim();
+  return YONTEMLER[v.yontem] || v.yontem || "—";
+};
+
+async function borcAc(m) {
+  aktifModul = m; borcModul = m; borcFiltre = "tumu";
+  menuIsaretle(m.id);
+  $("modul-ad").textContent = m.ad + (m.kol === "kadin" ? " — Kadın Kolu" : "");
+  $("modul-aciklama").textContent = "Kimden ne alındı, kim geri ödedi — TL, altın, döviz, çek";
+  $("ara").classList.remove("gizli"); $("ara").value = "";
+  $("ozet").classList.add("gizli");
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+  const [{ data: y }, { data: s }, { data: kay, error }] = await Promise.all([
+    sb.rpc("modul_yazabilir", { p_modul: m.id }),
+    sb.rpc("modul_silebilir", { p_modul: m.id }),
+    sb.from("kayitlar").select("*, kullanicilar!kayitlar_olusturan_fkey(ad_soyad)")
+      .eq("modul_id", m.id).order("olusturuldu", { ascending: false })
+  ]);
+  if (error) { $("icerik").innerHTML = `<div class="bos">Yüklenemedi: ${kacir(error.message)}</div>`; return; }
+  yazabilir = !!y; silebilir = !!s;
+  const hepsi = (kay || []).map(borcNormalize);
+  borcOdemeler = hepsi.filter(k => k.veri.tip === "odeme");
+  borcListe = hepsi.filter(k => k.veri.tip === "borc").sort((a, b) => (b.veri.tarih || "").localeCompare(a.veri.tarih || ""));
+  $("ekle-btn").textContent = yazabilir ? "+ Yeni Borç / Alacak" : "+ Talep Oluştur";
+  $("ekle-btn").classList.remove("gizli");
+  $("ekle-btn").onclick = () => borcFormu(null);
+  borcCiz();
+}
+
+function borcCiz() {
+  const q = $("ara").value.toLowerCase().trim();
+  const hesaplar = new Map(borcListe.map(b => [b.id, borcHesap(b)]));
+
+  // --- özet
+  const acik = borcListe.filter(b => hesaplar.get(b.id).durum !== "Kapandı");
+  const toplam = (yon, alan) => borcListe.filter(b => b.veri.yon === yon).reduce((s, b) => s + hesaplar.get(b.id)[alan], 0);
+  const altinOzet = yon => {
+    const t = {};
+    acik.filter(b => b.veri.yon === yon && b.veri.kalem === "altin").forEach(b => {
+      const h = hesaplar.get(b.id); const c = b.veri.altin_cinsi || "Altın";
+      if (h.miktarKalan) t[c] = (t[c] || 0) + h.miktarKalan; });
+    return Object.entries(t).map(([c, n]) => `${n} ${c}`).join(", ");
+  };
+  const altinB = altinOzet("borc"), altinA = altinOzet("alacak");
+  const geciken = acik.filter(b => hesaplar.get(b.id).gecikti).length;
+  $("ozet").innerHTML = `
+    <div><div class="k">Kalan Borcumuz</div><div class="v" style="color:var(--kirmizi)">${paraYaz(toplam("borc","kalan"))}</div>
+      ${altinB ? `<div class="alt">+ ${kacir(altinB)}</div>` : ""}</div>
+    <div><div class="k">Kalan Alacağımız</div><div class="v" style="color:#2E9E5B">${paraYaz(toplam("alacak","kalan"))}</div>
+      ${altinA ? `<div class="alt">+ ${kacir(altinA)}</div>` : ""}</div>
+    <div><div class="k">Toplam Ödenen</div><div class="v">${paraYaz(toplam("borc","odenen"))}</div><div class="alt">borçlarımıza</div></div>
+    <div><div class="k">Açık Kayıt</div><div class="v">${acik.length} <span style="font-size:12px;color:var(--soluk)">/ ${borcListe.length}</span></div></div>
+    <div><div class="k">Vadesi Geçen</div><div class="v" style="color:${geciken ? "var(--kirmizi)" : "inherit"}">${geciken}</div></div>`;
+  $("ozet").classList.remove("gizli");
+
+  // --- filtre + liste
+  let liste = borcListe.filter(b => {
+    const h = hesaplar.get(b.id);
+    if (borcFiltre === "borc" && b.veri.yon !== "borc") return false;
+    if (borcFiltre === "alacak" && b.veri.yon !== "alacak") return false;
+    if (borcFiltre === "acik" && h.durum === "Kapandı") return false;
+    if (borcFiltre === "gecikti" && !h.gecikti) return false;
+    if (borcFiltre === "kapandi" && h.durum !== "Kapandı") return false;
+    if (q) {
+      const metin = JSON.stringify(b.veri).toLowerCase() + h.od.map(o => JSON.stringify(o.veri)).join(" ").toLowerCase();
+      if (!metin.includes(q)) return false;
+    }
+    return true;
+  });
+  const F = [["tumu","Tümü"],["borc","Borçlarımız"],["alacak","Alacaklarımız"],["acik","Açık"],["gecikti","Vadesi Geçen"],["kapandi","Kapandı"]];
+  const filtreler = `<div class="filtreler">${F.map(([k, a]) =>
+    `<button class="filtre ${borcFiltre === k ? "aktif" : ""}" data-filtre="${k}">${a}</button>`).join("")}</div>`;
+
+  const rozet = (h) => h.gecikti ? `<span class="rozet acik">Vadesi geçti</span>`
+    : `<span class="rozet ${ {"Açık":"acik","Kısmi Ödendi":"kismi","Kapandı":"kapali"}[h.durum] }">${h.durum}</span>`;
+
+  const tablo = !liste.length
+    ? `<div class="tablo-kutu"><div class="bos">${q || borcFiltre !== "tumu" ? "Bu filtreye uyan kayıt yok." : "Henüz borç / alacak kaydı yok."}</div></div>`
+    : `<div class="tablo-kutu"><table>
+      <thead><tr><th>Tarih</th><th>Yön</th><th>Kişi / Kurum</th><th>Ne Alındı</th><th class="sag">Tutar (TL)</th>
+      <th class="sag">Ödenen</th><th class="sag">Kalan</th><th>Vade</th><th>Durum</th><th>Son Ödeme</th><th class="sag">İşlem</th></tr></thead>
+      <tbody>${liste.map(b => { const v = b.veri, h = hesaplar.get(b.id);
+        const son = h.od.slice().sort((a, c) => (c.veri.tarih || "").localeCompare(a.veri.tarih || ""))[0];
+        return `<tr>
+        <td>${tarihYaz(v.tarih)}</td>
+        <td><span class="yon ${v.yon}">${v.yon === "alacak" ? "Alacak" : "Borç"}</span></td>
+        <td><b>${kacir(v.karsi_taraf)}</b>${v.aciklama && v.aciklama !== v.karsi_taraf ? `<span class="hucre-alt">${kacir(v.aciklama)}</span>` : ""}</td>
+        <td>${kacir(neAlindi(v))}${v.kur && v.kalem !== "tl" ? `<span class="hucre-alt">kur: ${paraYaz(v.kur)}</span>` : ""}</td>
+        <td class="sag">${paraYaz(v.tutar_tl)}</td>
+        <td class="sag">${paraYaz(h.odenen)}${h.miktarOdenen ? `<span class="hucre-alt">${h.miktarOdenen} ${v.altin_cinsi || ""}</span>` : ""}</td>
+        <td class="sag" style="font-weight:700;color:${h.kalan > 0 ? "var(--kirmizi)" : "#2E9E5B"}">${paraYaz(h.kalan)}${h.miktarKalan ? `<span class="hucre-alt">${h.miktarKalan} ${v.altin_cinsi || ""}</span>` : ""}</td>
+        <td>${tarihYaz(v.vade_tarihi)}</td>
+        <td>${rozet(h)}</td>
+        <td style="font-size:12px">${son ? `${kacir(son.veri.odeyen)}<span class="hucre-alt">${tarihYaz(son.veri.tarih)} · ${paraYaz(son.veri.tutar_tl)}</span>` : "—"}</td>
+        <td class="sag" style="white-space:nowrap">
+          ${h.durum !== "Kapandı" ? `<button class="btn kucuk" data-ode="${b.id}">${yazabilir ? "Ödeme" : "Ödeme Talebi"}</button>` : ""}
+          <button class="btn ikincil kucuk" data-detay="${b.id}">Detay</button>
+          ${silebilir ? `<button class="btn tehlike kucuk" data-sil="${b.id}">Sil</button>` : ""}
+        </td></tr>`; }).join("")}</tbody></table></div>`;
+
+  $("icerik").innerHTML = filtreler + tablo;
+  $("icerik").querySelectorAll("[data-filtre]").forEach(b => b.onclick = () => { borcFiltre = b.dataset.filtre; borcCiz(); });
+  $("icerik").querySelectorAll("[data-ode]").forEach(b => b.onclick = () => borcOdemeFormu(borcListe.find(x => x.id === b.dataset.ode)));
+  $("icerik").querySelectorAll("[data-detay]").forEach(b => b.onclick = () => borcDetay(borcListe.find(x => x.id === b.dataset.detay)));
+  $("icerik").querySelectorAll("[data-sil]").forEach(b => b.onclick = () => borcSil(borcListe.find(x => x.id === b.dataset.sil)));
+}
+
+/* --- detay penceresi: borç bilgisi + ödemeler --- */
+function borcDetay(b) {
+  const v = b.veri, h = borcHesap(b);
+  const satir = (k, d) => d ? `<div class="dt"><span>${k}</span><b>${d}</b></div>` : "";
+  $("form-baslik").textContent = `${v.yon === "alacak" ? "Alacak" : "Borç"} — ${v.karsi_taraf}`;
+  $("form-govde").innerHTML = `
+    <div class="genis detay-kutu">
+      ${satir("Kişi / Kurum", kacir(v.karsi_taraf) + (v.karsi_telefon ? " · " + kacir(v.karsi_telefon) : ""))}
+      ${satir("Tarih", tarihYaz(v.tarih))}
+      ${satir("Ne alındı", kacir(neAlindi(v)))}
+      ${v.kur && v.kalem !== "tl" ? satir("O günkü kur", paraYaz(v.kur)) : ""}
+      ${satir("TL karşılığı", paraYaz(v.tutar_tl))}
+      ${satir("Vade", tarihYaz(v.vade_tarihi))}
+      ${satir(v.yon === "alacak" ? "Vakıf adına veren" : "Vakıf adına teslim alan", kacir(v.alan_kisi))}
+      ${satir("Belge", kacir(v.belge))}
+      ${satir("Açıklama", kacir(v.aciklama))}
+      ${satir("Not", kacir(v.not_metni))}
+      ${satir("Kaydeden", kacir(b.kullanicilar?.ad_soyad) + " · " + tarihYaz(b.olusturuldu))}
+      <div class="dt"><span>Durum</span><b>${h.durum}${h.gecikti ? " · VADESİ GEÇTİ" : ""} — ödenen ${paraYaz(h.odenen)}, kalan <span style="color:${h.kalan ? "var(--kirmizi)" : "#2E9E5B"}">${paraYaz(h.kalan)}</span>${h.miktarKalan ? ` (${h.miktarKalan} ${v.altin_cinsi})` : ""}</b></div>
+    </div>
+    <div class="genis">
+      <div class="kira-bolum" style="margin-top:4px">Geri Ödemeler (${h.od.length})</div>
+      ${v._eski_odenen ? `<div style="font-size:12px;color:var(--soluk);margin-bottom:8px">Eski kayıttan aktarılan ödenen tutar: ${paraYaz(v._eski_odenen)}</div>` : ""}
+      ${h.od.length ? `<div class="tablo-kutu"><table style="min-width:0">
+        <thead><tr><th>Tarih</th><th>Kim Ödedi</th><th>Ne ile</th><th class="sag">Tutar</th><th>Teslim Alan</th><th>Açıklama</th><th>Kaydeden</th>${silebilir ? "<th></th>" : ""}</tr></thead>
+        <tbody>${h.od.slice().sort((a, c) => (a.veri.tarih || "").localeCompare(c.veri.tarih || "")).map(o => `<tr>
+          <td>${tarihYaz(o.veri.tarih)}</td><td><b>${kacir(o.veri.odeyen)}</b></td>
+          <td>${kacir(neIle(o.veri))}${o.veri.kur ? `<span class="hucre-alt">kur: ${paraYaz(o.veri.kur)}</span>` : ""}</td>
+          <td class="sag">${paraYaz(o.veri.tutar_tl)}</td>
+          <td>${kacir(o.veri.teslim_alan || "—")}</td>
+          <td style="font-size:12px;color:var(--soluk)">${kacir(o.veri.aciklama || "")}</td>
+          <td style="font-size:12px">${kacir(o.kullanicilar?.ad_soyad || "—")}</td>
+          ${silebilir ? `<td><button class="btn tehlike kucuk" data-odeme-sil="${o.id}">Sil</button></td>` : ""}
+        </tr>`).join("")}</tbody></table></div>` : `<div class="bos" style="padding:16px">Henüz geri ödeme yok.</div>`}
+    </div>
+    <div class="genis" style="display:flex;gap:8px;flex-wrap:wrap">
+      ${h.durum !== "Kapandı" ? `<button class="btn kucuk" id="dt-ode">${yazabilir ? "+ Ödeme Ekle" : "+ Ödeme Talebi"}</button>` : ""}
+      ${yazabilir ? `<button class="btn ikincil kucuk" id="dt-duzenle">Borcu Düzenle</button>` : ""}
+    </div>`;
+  $("form-kaydet").classList.add("gizli");
+  $("form-iptal").textContent = "Kapat";
+  const de = $("dt-ode"); if (de) de.onclick = () => borcOdemeFormu(b);
+  const dd = $("dt-duzenle"); if (dd) dd.onclick = () => borcFormu(b);
+  $("form-govde").querySelectorAll("[data-odeme-sil]").forEach(x => x.onclick = async () => {
+    if (!confirm("Bu ödeme kaydı silinecek. Emin misiniz?")) return;
+    const { error } = await sb.from("kayitlar").delete().eq("id", x.dataset.odemeSil);
+    if (error) { alert("Silinemedi: " + error.message); return; }
+    await borcAc(borcModul); borcDetay(borcListe.find(z => z.id === b.id));
+  });
+  $("perde").classList.remove("gizli");
+}
+function borcPencereSifirla() { $("form-kaydet").classList.remove("gizli"); $("form-iptal").textContent = "İptal"; }
+
+/* --- borç / alacak formu --- */
+function borcFormu(b) {
+  borcPencereSifirla();
+  const v = b?.veri || {};
+  const bugun = new Date();
+  const sec = (id, obj, secili, bos) => `<select id="${id}">${bos ? `<option value="">${bos}</option>` : ""}${
+    (Array.isArray(obj) ? obj.map(x => [x, x]) : Object.entries(obj)).map(([k, a]) =>
+      `<option value="${k}" ${k === secili ? "selected" : ""}>${a}</option>`).join("")}</select>`;
+  $("form-baslik").textContent = b ? "Borç / Alacak Düzenle" : (yazabilir ? "Yeni Borç / Alacak" : "Borç / Alacak Talebi");
+  $("form-govde").innerHTML = `
+    <div class="alan"><label>Yön <span style="color:var(--kirmizi)">*</span></label>
+      ${sec("bf-yon", { borc:"BORÇ — vakıf aldı, geri ödeyecek", alacak:"ALACAK — vakıf verdi, geri alacak" }, v.yon || "borc")}</div>
+    <div class="alan"><label>Tarih <span style="color:var(--kirmizi)">*</span></label>
+      <input type="date" id="bf-tarih" value="${v.tarih || `${donemStr(bugun)}-${String(bugun.getDate()).padStart(2,"0")}`}"></div>
+    <div class="alan"><label>Kişi / Kurum <span style="color:var(--kirmizi)">*</span></label>
+      <input type="text" id="bf-karsi" value="${kacir(v.karsi_taraf || "")}" placeholder="kimden alındı / kime verildi"></div>
+    <div class="alan"><label>Telefon</label><input type="text" id="bf-tel" value="${kacir(v.karsi_telefon || "")}"></div>
+    <div class="alan"><label>Ne alındı <span style="color:var(--kirmizi)">*</span></label>${sec("bf-kalem", KALEMLER, v.kalem || "tl")}</div>
+    <div class="alan" id="bf-cins-alan"><label>Altın cinsi</label>${sec("bf-cins", ALTIN_CINSLERI, v.altin_cinsi, "— seçiniz —")}</div>
+    <div class="alan" id="bf-miktar-alan"><label>Miktar (adet / gram / döviz)</label>
+      <input type="number" step="0.01" id="bf-miktar" value="${v.miktar ?? ""}"></div>
+    <div class="alan" id="bf-kur-alan"><label>O günkü birim kur (₺)</label>
+      <input type="number" step="0.01" id="bf-kur" value="${v.kur ?? ""}" placeholder="1 adet / 1 gram / 1 $ kaç TL"></div>
+    <div class="alan"><label>TL karşılığı <span style="color:var(--kirmizi)">*</span></label>
+      <input type="number" step="0.01" id="bf-tutar" value="${v.tutar_tl ?? ""}"></div>
+    <div class="alan"><label>Vade tarihi</label><input type="date" id="bf-vade" value="${v.vade_tarihi || ""}"></div>
+    <div class="alan"><label>Vakıf adına teslim alan / veren</label>
+      <input type="text" id="bf-alan" value="${kacir(v.alan_kisi || "")}"></div>
+    <div class="alan"><label>Belge (çek / senet no, banka)</label><input type="text" id="bf-belge" value="${kacir(v.belge || "")}"></div>
+    <div class="alan genis"><label>Açıklama</label><input type="text" id="bf-aciklama" value="${kacir(v.aciklama || "")}" placeholder="ne için alındı"></div>
+    <div class="alan genis"><label>Not</label><textarea rows="2" id="bf-not">${kacir(v.not_metni || "")}</textarea></div>`;
+  const kalemDegisti = () => {
+    const k = $("bf-kalem").value;
+    $("bf-cins-alan").classList.toggle("gizli", k !== "altin");
+    $("bf-miktar-alan").classList.toggle("gizli", !["altin","usd","eur","esya"].includes(k));
+    $("bf-kur-alan").classList.toggle("gizli", !["altin","usd","eur"].includes(k));
+  };
+  const hesapla = () => { const m = Number($("bf-miktar").value), k = Number($("bf-kur").value);
+    if (m && k && ["altin","usd","eur"].includes($("bf-kalem").value)) $("bf-tutar").value = (m * k).toFixed(2); };
+  $("bf-kalem").onchange = kalemDegisti; $("bf-miktar").oninput = hesapla; $("bf-kur").oninput = hesapla;
+  kalemDegisti();
+  $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
+  $("form-kaydet").onclick = async () => {
+    const karsi = $("bf-karsi").value.trim(), tarih = $("bf-tarih").value, tutar = Number($("bf-tutar").value);
+    if (!karsi || !tarih || !tutar) { alert("Kişi/kurum, tarih ve TL karşılığı zorunlu."); return; }
+    const kalem = $("bf-kalem").value;
+    if (kalem === "altin" && !$("bf-cins").value) { alert("Altın cinsini seçin."); return; }
+    const num = id => $(id).value !== "" ? Number($(id).value) : null;
+    const veri = { tip:"borc", yon: $("bf-yon").value, tarih, karsi_taraf: karsi, karsi_telefon: $("bf-tel").value.trim() || null,
+      kalem, altin_cinsi: kalem === "altin" ? $("bf-cins").value : null,
+      miktar: ["altin","usd","eur","esya"].includes(kalem) ? num("bf-miktar") : null,
+      kur: ["altin","usd","eur"].includes(kalem) ? num("bf-kur") : null,
+      tutar_tl: tutar, vade_tarihi: $("bf-vade").value || null, alan_kisi: $("bf-alan").value.trim() || null,
+      belge: $("bf-belge").value.trim() || null, aciklama: $("bf-aciklama").value.trim() || null,
+      not_metni: $("bf-not").value.trim() || null };
+    if (v._eski_odenen) veri._eski_odenen = v._eski_odenen;
+    const baslik = `${karsi} — ${neAlindi(veri)} (${paraYaz(tutar)})`;
+    const kol = b?.kol || borcModul.kol || ben.kol;
+    $("form-kaydet").textContent = "Kaydediliyor…";
+    let hata;
+    if (!yazabilir) ({ error: hata } = await sb.from("talepler").insert({ modul_id: borcModul.id, tip: b ? "duzeltme" : "ekleme",
+        kayit_id: b?.id || null, veri: { ...veri, kol, baslik }, olusturan: ben.id }));
+    else if (b) ({ error: hata } = await sb.from("kayitlar").update({ veri, baslik }).eq("id", b.id));
+    else ({ error: hata } = await sb.from("kayitlar").insert({ modul_id: borcModul.id, kol, veri, baslik, olusturan: ben.id }));
+    $("form-kaydet").textContent = "Kaydet";
+    if (hata) { alert("Kaydedilemedi: " + hata.message); return; }
+    $("perde").classList.add("gizli");
+    if (!yazabilir) { alert("Talebiniz gönderildi. Yetkili onayına düştü."); return; }
+    borcAc(borcModul);
+  };
+  $("perde").classList.remove("gizli");
+}
+
+/* --- geri ödeme formu --- */
+function borcOdemeFormu(b) {
+  borcPencereSifirla();
+  const v = b.veri, h = borcHesap(b), bugun = new Date();
+  const sec = (id, obj, secili, bos) => `<select id="${id}">${bos ? `<option value="">${bos}</option>` : ""}${
+    (Array.isArray(obj) ? obj.map(x => [x, x]) : Object.entries(obj)).map(([k, a]) =>
+      `<option value="${k}" ${k === secili ? "selected" : ""}>${a}</option>`).join("")}</select>`;
+  $("form-baslik").textContent = `${v.yon === "alacak" ? "Tahsilat" : "Geri Ödeme"} — ${v.karsi_taraf}`;
+  $("form-govde").innerHTML = `
+    <div class="genis" style="font-size:13px;color:var(--soluk);background:#F1F6F6;padding:10px 12px;border-radius:6px">
+      ${kacir(neAlindi(v))} · toplam ${paraYaz(v.tutar_tl)} · ödenen ${paraYaz(h.odenen)} · <b style="color:var(--kirmizi)">kalan ${paraYaz(h.kalan)}</b>${h.miktarKalan ? ` (${h.miktarKalan} ${v.altin_cinsi})` : ""}</div>
+    <div class="alan"><label>Tarih <span style="color:var(--kirmizi)">*</span></label>
+      <input type="date" id="bo-tarih" value="${donemStr(bugun)}-${String(bugun.getDate()).padStart(2,"0")}"></div>
+    <div class="alan"><label>${v.yon === "alacak" ? "Kim ödedi (karşı taraftan)" : "Kim ödedi (vakıf adına)"} <span style="color:var(--kirmizi)">*</span></label>
+      <input type="text" id="bo-odeyen" value="${kacir(v.yon === "alacak" ? v.karsi_taraf : ben.ad_soyad)}"></div>
+    <div class="alan"><label>Ne ile ödendi <span style="color:var(--kirmizi)">*</span></label>
+      ${sec("bo-yontem", YONTEMLER, v.kalem === "altin" ? "altin" : (v.kalem === "usd" || v.kalem === "eur") ? "doviz" : "nakit")}</div>
+    <div class="alan" id="bo-cins-alan"><label>Altın cinsi</label>${sec("bo-cins", ALTIN_CINSLERI, v.altin_cinsi, "— seçiniz —")}</div>
+    <div class="alan" id="bo-miktar-alan"><label>Miktar (adet / gram / döviz)</label><input type="number" step="0.01" id="bo-miktar"></div>
+    <div class="alan" id="bo-kur-alan"><label>O günkü kur (₺)</label><input type="number" step="0.01" id="bo-kur"></div>
+    <div class="alan"><label>Tutar (TL) <span style="color:var(--kirmizi)">*</span></label>
+      <input type="number" step="0.01" id="bo-tutar" value="${h.kalan || ""}"></div>
+    <div class="alan"><label>Teslim alan</label><input type="text" id="bo-teslim" value="${kacir(v.yon === "alacak" ? "" : v.karsi_taraf)}"></div>
+    <div class="alan genis"><label>Açıklama</label><input type="text" id="bo-aciklama" placeholder="örn. kermes gelirinden, havale dekont no…"></div>`;
+  const yontemDegisti = () => { const y = $("bo-yontem").value;
+    $("bo-cins-alan").classList.toggle("gizli", y !== "altin");
+    $("bo-miktar-alan").classList.toggle("gizli", y !== "altin" && y !== "doviz");
+    $("bo-kur-alan").classList.toggle("gizli", y !== "altin" && y !== "doviz"); };
+  const hesapla = () => { const m = Number($("bo-miktar").value), k = Number($("bo-kur").value); if (m && k) $("bo-tutar").value = (m * k).toFixed(2); };
+  $("bo-yontem").onchange = yontemDegisti; $("bo-miktar").oninput = hesapla; $("bo-kur").oninput = hesapla; yontemDegisti();
+  $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
+  $("form-kaydet").onclick = async () => {
+    const tarih = $("bo-tarih").value, odeyen = $("bo-odeyen").value.trim(), tutar = Number($("bo-tutar").value);
+    if (!tarih || !odeyen || !tutar) { alert("Tarih, ödeyen ve tutar zorunlu."); return; }
+    if (tutar > h.kalan + 0.01 && !confirm(`Tutar kalandan (${paraYaz(h.kalan)}) fazla. Yine de kaydedeyim mi?`)) return;
+    const y = $("bo-yontem").value, num = id => $(id).value !== "" ? Number($(id).value) : null;
+    const veri = { tip:"odeme", borc_id: b.id, tarih, odeyen, yontem: y,
+      altin_cinsi: y === "altin" ? $("bo-cins").value || null : null,
+      miktar: (y === "altin" || y === "doviz") ? num("bo-miktar") : null,
+      kur: (y === "altin" || y === "doviz") ? num("bo-kur") : null,
+      tutar_tl: tutar, teslim_alan: $("bo-teslim").value.trim() || null, aciklama: $("bo-aciklama").value.trim() || null };
+    const baslik = `${v.karsi_taraf} ← ${odeyen} ${paraYaz(tutar)} (${tarih})`;
+    $("form-kaydet").textContent = "Kaydediliyor…";
+    let hata;
+    if (!yazabilir) ({ error: hata } = await sb.from("talepler").insert({ modul_id: borcModul.id, tip: "ekleme",
+        veri: { ...veri, kol: b.kol, baslik }, olusturan: ben.id }));
+    else ({ error: hata } = await sb.from("kayitlar").insert({ modul_id: borcModul.id, kol: b.kol, veri, baslik, olusturan: ben.id }));
+    $("form-kaydet").textContent = "Kaydet";
+    if (hata) { alert("Kaydedilemedi: " + hata.message); return; }
+    $("perde").classList.add("gizli");
+    if (!yazabilir) { alert("Talebiniz gönderildi. Yetkili onayına düştü."); return; }
+    borcAc(borcModul);
+  };
+  $("perde").classList.remove("gizli");
+}
+
+async function borcSil(b) {
+  const h = borcHesap(b);
+  if (!confirm(`"${b.veri.karsi_taraf}" kaydı ve altındaki ${h.od.length} ödeme kalıcı olarak silinecek. Emin misiniz?`)) return;
+  if (h.od.length) await sb.from("kayitlar").delete().in("id", h.od.map(o => o.id));
+  const { error } = await sb.from("kayitlar").delete().eq("id", b.id);
+  if (error) { alert("Silinemedi: " + error.message); return; }
+  borcAc(borcModul);
 }
 
 /* =====================================================================

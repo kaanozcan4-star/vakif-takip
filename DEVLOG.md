@@ -1,6 +1,6 @@
 # DEVLOG — Semerkand Kurtköy Vakfı Takip Sistemi
 
-Son güncelleme: 7 Eylül 2026
+Son güncelleme: 8 Eylül 2026
 
 ---
 
@@ -63,6 +63,12 @@ Son güncelleme: 7 Eylül 2026
 - `04_kira_modulu.sql`: `kira` modülü, 4 dergah kaydı, her dergah için son 12 ayın ödemesi (Erol Kaan Özcan, ayın 5'i).
 - `index.html`: dergah kartları + vadeye göre dolan çubuk, 12 aylık "kim ödedi" tablosu, tüm ödeme listesi, ödeme kaydet/düzenle/sil, dergah ekle/düzenle, yetkisizler için talep akışı.
 - Kira tutarları bilinmiyor, panelden girilecek.
+
+### 9. Borç / Alacak Defteri Detaylandırıldı (8 Eylül 2026) ✅
+- Özel panel: yön (borç/alacak), kişi, ne alındı (TL / altın cinsi+adet / döviz / çek / senet), o günkü kur, TL karşılığı, vade, teslim alan, belge.
+- Her borcun altında geri ödemeler: kim ödedi, ne ile (nakit/havale/altın/döviz/mahsup), tutar, teslim alan, kaydeden.
+- Özet: kalan borç, kalan alacak (altın olarak da), vadesi geçen; filtreler ve arama.
+- 4 Ümit Çelik çeki yeni yapıya taşındı, notlardaki ödemeler 8 ödeme kaydına çevrildi; Çek 4 notundan 162.000 ₺ alacak kaydı çıkarıldı.
 
 ## KALAN VE DEVAM EDEN İŞLER
 

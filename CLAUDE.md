@@ -96,8 +96,20 @@ Kadın kolu: Borçlar/Alacaklar, Kermes Gelirleri, Sosyal Faaliyetler
 Dergahlar: Erkek Merkez (Kurtköy Merkez), Kadın Merkez, Aydos Kadın, Çınardere Kadın, Velibaba Kadın.
 Vade her ayın 5'i; kartlardaki çubuk vadeye yaklaştıkça dolar (turkuaz → sarı %75 →
 kırmızı gecikince → yeşil ödenince). Ödeme kaydında "kim ödedi" ve "kim kaydetti" ayrı tutulur.
-Kira tutarları henüz girilmedi; kartta "Düzenle" ile girilir.
+Kira tutarları girildi (toplam 143.800 ₺/ay); kartta "Düzenle" ile değişir.
 Yeni özel panel eklemek için: `modulSec()` içine kod eşlemesi + kendi `xAc()` fonksiyonu.
+
+## Borç / Alacak Defteri (8 Eylül 2026)
+
+`borclar` ve `k_borclar` modülleri özel panelle açılır (`borcAc`). `modul_alanlari` kullanılmaz.
+`veri.tip='borc'`: yon (borc|alacak), karsi_taraf, tarih, kalem (tl|altin|usd|eur|cek|senet|esya),
+altin_cinsi (Çeyrek, Yarım, Tam, Ata, Cumhuriyet, Reşat, Gremse, Gram 24/22, Bilezik), miktar, kur,
+tutar_tl, vade_tarihi, alan_kisi, belge, aciklama, not_metni.
+`veri.tip='odeme'`: borc_id, tarih, odeyen (kim ödedi), yontem (nakit|havale|altin|doviz|mahsup|diger),
+altin_cinsi, miktar, kur, tutar_tl, teslim_alan, aciklama.
+Durum hesaplanır (ödemelerden): Açık / Kısmi Ödendi / Kapandı / Vadesi geçti. Altın borçlarda kalan adet de gösterilir.
+Eski Excel'den gelen 4 Ümit Çelik çeki yeni yapıya taşındı; notlardaki ödemeler ayrı ödeme kaydı oldu.
+Kaynağı bilinmeyen ödemelerde odeyen = "Bilinmiyor (düzeltilecek)".
 
 ## Görsel Kimlik
 
