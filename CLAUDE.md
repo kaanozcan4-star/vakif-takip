@@ -93,7 +93,7 @@ Kadın kolu: Borçlar/Alacaklar, Kermes Gelirleri, Sosyal Faaliyetler
 
 `kira` kodlu modül `index.html` içinde özel panelle açılır (`kiraAc`). Veri yine
 `kayitlar` tablosunda: `veri.tip='yer'` dergah, `veri.tip='odeme'` ödeme.
-Dergahlar: Erkek Merkez (Velibaba), Kadın Merkez, Aydos Kadın, Çınardere Kadın.
+Dergahlar: Erkek Merkez (Kurtköy Merkez), Kadın Merkez, Aydos Kadın, Çınardere Kadın.
 Vade her ayın 5'i; kartlardaki çubuk vadeye yaklaştıkça dolar (turkuaz → sarı %75 →
 kırmızı gecikince → yeşil ödenince). Ödeme kaydında "kim ödedi" ve "kim kaydetti" ayrı tutulur.
 Kira tutarları henüz girilmedi; kartta "Düzenle" ile girilir.

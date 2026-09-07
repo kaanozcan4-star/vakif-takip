@@ -43,7 +43,7 @@ BEGIN
 
   FOR r IN
     SELECT * FROM (VALUES
-      ('Erkek Merkez Dergahı',   'Velibaba',  'erkek', 1),
+      ('Erkek Merkez Dergahı',   'Kurtköy Merkez', 'erkek', 1),
       ('Kadın Merkez Dergahı',   '',          'kadin', 2),
       ('Aydos Kadın Dergahı',    'Aydos',     'kadin', 3),
       ('Çınardere Kadın Dergahı','Çınardere', 'kadin', 4)
