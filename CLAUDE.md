@@ -23,7 +23,7 @@ ve vakti yok — "kur ve unut" olmalı, sürekli bakım isteyen bir yapı olmama
 |---|---|---|
 | Veritabanı + giriş sistemi | Supabase (ücretsiz katman) | ₺0 |
 | Arayüz | Tek dosya HTML + JavaScript | ₺0 |
-| Yayın | Netlify Drop | ₺0 |
+| Yayın | GitHub Pages — https://kaanozcan4-star.github.io/vakif-takip/ (main dalı, push ile otomatik) | ₺0 |
 | Alan adı | Henüz alınmadı (opsiyonel) | ~₺500/yıl |
 
 **Neden Next.js değil:** Başta Next.js planlandı ama GitHub hesabı, Node kurulumu

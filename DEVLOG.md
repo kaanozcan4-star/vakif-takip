@@ -13,6 +13,8 @@ Son güncelleme: 7 Eylül 2026
 4. ✅ Excel çek ve ödeme verileri (`03_excel_verileri.sql`) UTF-8 Türkçe desteğiyle veritabanına aktarıldı.
 5. ✅ Supabase projesi uyandırıldı, Müdür şifresi SQL ile yenilendi, giriş çalışıyor.
 7. ✅ **Kira Takip paneli** eklendi (`04_kira_modulu.sql` + `index.html`). SQL'in Supabase'de çalıştırılması gerekiyor.
+6. ✅ **Canlı site:** https://kaanozcan4-star.github.io/vakif-takip/ (GitHub Pages, main dalı, otomatik güncellenir).
+8. ✅ Çek kayıtlarındaki bozuk Türkçe karakterler (çift UTF-8) düzeltildi.
 6. ✅ **GitHub:** Proje Git kontrolüne alındı, SSH ile `https://github.com/kaanozcan4-star/vakif-takip` deposuna başarıyla yüklendi.
 
 ---
@@ -68,4 +70,4 @@ Son güncelleme: 7 Eylül 2026
 2. ✅ Şifre SQL Editor üzerinden yenilendi.
 5. ✅ Kira modülü veritabanına kuruldu (7 Eylül 2026, REST üzerinden; `04_kira_modulu.sql` artık sadece yedek/yeniden kurulum için). ⬜ Kira tutarları panelden girilecek.
 3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.
-4. ⬜ **Netlify Yayını:** Dosyaların `app.netlify.com/drop` veya GitHub entegrasyonuyla canlıya alınması.
+4. ✅ **Canlı yayın (GitHub Pages):** https://kaanozcan4-star.github.io/vakif-takip/ — `main` dalına her push 1 dk içinde yayına girer. Netlify'a gerek kalmadı.
