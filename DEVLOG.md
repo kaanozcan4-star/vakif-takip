@@ -66,6 +66,6 @@ Son güncelleme: 7 Eylül 2026
 
 1. ✅ Supabase projesi uyandırıldı (Resume project).
 2. ✅ Şifre SQL Editor üzerinden yenilendi.
-5. ⬜ **Kira modülü SQL'i:** `04_kira_modulu.sql` Supabase SQL Editor'da çalıştırılacak, sonra kira tutarları panelden girilecek.
+5. ✅ Kira modülü veritabanına kuruldu (7 Eylül 2026, REST üzerinden; `04_kira_modulu.sql` artık sadece yedek/yeniden kurulum için). ⬜ Kira tutarları panelden girilecek.
 3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.
 4. ⬜ **Netlify Yayını:** Dosyaların `app.netlify.com/drop` veya GitHub entegrasyonuyla canlıya alınması.
