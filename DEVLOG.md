@@ -74,10 +74,17 @@ Son güncelleme: 8 Eylül 2026
 - Borç ve ödeme formlarında altın cinsi / dolar / euro seçilince anlık satış kuru çekilir, TL karşılığı otomatik hesaplanır.
 - Listede ve özette açık altın/döviz kalanların bugünkü TL değeri görünür.
 
+### 11. Kullanıcı Yönetimi (8 Eylül 2026) ✅
+- Kullanıcılar ekranı (sadece erkek Başkan/Müdür): kullanıcı adı + şifre ile hesap açma, ad soyad, telefon, kol, görev, çalıştığı yer (şube/dergah), aktif/kapalı, sil.
+- Yönetici şifre sıfırlar, güncel şifreleri görür (göz simgesi). Kullanıcı kendi şifresini "Şifremi değiştir" ile değiştirir, yönetici yine görür.
+- Giriş ekranında "Beni hatırla". E-posta zorunluluğu kalktı.
+- ⬜ `05_kullanici_yonetimi.sql` Supabase SQL Editor'da çalıştırılacak (kolonlar + fonksiyonlar, DDL olduğu için REST ile yapılamıyor).
+
 ## KALAN VE DEVAM EDEN İŞLER
 
 1. ✅ Supabase projesi uyandırıldı (Resume project).
 2. ✅ Şifre SQL Editor üzerinden yenilendi.
+6. ⬜ **`05_kullanici_yonetimi.sql`** Supabase SQL Editor'da çalıştırılacak — Kullanıcılar ekranı onsuz çalışmaz.
 5. ✅ Kira modülü veritabanına kuruldu (7 Eylül 2026, REST üzerinden; `04_kira_modulu.sql` artık sadece yedek/yeniden kurulum için). ⬜ Kira tutarları panelden girilecek.
 3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.
 4. ✅ **Canlı yayın (GitHub Pages):** https://kaanozcan4-star.github.io/vakif-takip/ — `main` dalına her push 1 dk içinde yayına girer. Netlify'a gerek kalmadı.

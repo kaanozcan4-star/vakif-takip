@@ -47,6 +47,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--yesil-3);outline
 .btn.kucuk{padding:6px 11px;font-size:12.5px}
 .hata{background:#FBEAE7;color:var(--kirmizi);padding:10px 12px;border-radius:6px;
   font-size:13px;margin-bottom:14px}
+.hatirla{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soluk);margin:-4px 0 16px;cursor:pointer}
+.hatirla input{width:auto;margin:0}
+.yan-alt button{margin-right:12px}
+.sifre-gizli{font-family:monospace;font-size:12.5px;margin-right:4px}
 
 /* ---------- DÜZEN ---------- */
 #uygulama{display:grid;grid-template-columns:246px 1fr;min-height:100vh}
@@ -180,13 +184,14 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
     </div>
     <div id="giris-hata" class="hata gizli"></div>
     <div class="alan">
-      <label>E-posta</label>
-      <input type="email" id="eposta" autocomplete="username">
+      <label>Kullanıcı adı</label>
+      <input type="text" id="eposta" autocomplete="username" placeholder="kullanıcı adı veya e-posta">
     </div>
     <div class="alan">
       <label>Şifre</label>
       <input type="password" id="sifre" autocomplete="current-password">
     </div>
+    <label class="hatirla"><input type="checkbox" id="beni-hatirla" checked> Beni hatırla</label>
     <div class="alan gizli" id="ad-alani">
       <label>Ad Soyad</label>
       <input type="text" id="kurulum-ad" placeholder="Erol Kaan">
@@ -212,7 +217,7 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
     <div class="yan-alt">
       <div class="ad" id="kul-ad"></div>
       <div class="rol" id="kul-rol"></div>
-      <button id="cikis-btn">Çıkış yap</button>
+      <button id="cikis-btn">Çıkış yap</button><button id="sifre-btn">Şifremi değiştir</button>
     </div>
   </aside>
 
@@ -257,7 +262,18 @@ const SUPABASE_URL      = "https://zfujfdzhymlrighxhebl.supabase.co";   // Semer
 const SUPABASE_ANON_KEY = "sb_publishable_9kUSG4qWWfUI7M8MkQdpQw_LDza6AMj";    // publishable key (tarayıcıda güvenli)
 /* ===================================================================== */
 
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// "Beni hatırla" işaretliyse oturum tarayıcı kapanınca da kalır (localStorage),
+// değilse sekme/tarayıcı kapanınca biter (sessionStorage).
+const hatirlaDepo = {
+  getItem: k => { try { return localStorage.getItem(k) ?? sessionStorage.getItem(k); } catch { return null; } },
+  setItem: (k, v) => { try {
+    const kalici = localStorage.getItem("beni_hatirla") !== "0";
+    (kalici ? localStorage : sessionStorage).setItem(k, v);
+    (kalici ? sessionStorage : localStorage).removeItem(k);
+  } catch {} },
+  removeItem: k => { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch {} }
+};
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: hatirlaDepo } });
 const $  = id => document.getElementById(id);
 
 const GOREV_AD = {baskan:"Başkan", mudur:"Müdür", ticaret:"Ticaret",
@@ -307,19 +323,27 @@ $("giris-btn").onclick = async () => {
   }
 
   $("giris-btn").textContent = "Giriş yapılıyor…";
-  const { error } = await sb.auth.signInWithPassword({ email: eposta, password: sifre });
+  try { localStorage.setItem("beni_hatirla", $("beni-hatirla").checked ? "1" : "0"); } catch {}
+  let girisEposta = eposta;
+  if (!eposta.includes("@")) {
+    const { data: bulunan } = await sb.rpc("kullanici_eposta", { p_kullanici_adi: eposta });
+    girisEposta = bulunan || `${eposta.toLowerCase().trim()}@${GIRIS_ALANI}`;
+  }
+  const { error } = await sb.auth.signInWithPassword({ email: girisEposta, password: sifre });
   $("giris-btn").textContent = "Giriş Yap";
   if (error) {
     if (error.message?.includes("Failed to fetch") || error.status === 0 || error.name === "AuthRetryableFetchError") {
       hata.textContent = "Supabase sunucusuna ulaşılamıyor! Proje uyku modunda (Paused) olabilir. Supabase panelinden 'Restore' butonuna basın.";
     } else {
-      hata.textContent = "Giriş başarısız: " + (error.message === "Invalid login credentials" ? "E-posta veya şifre hatalı." : error.message);
+      hata.textContent = "Giriş başarısız: " + (error.message === "Invalid login credentials" ? "Kullanıcı adı veya şifre hatalı." : error.message);
     }
     hata.classList.remove("gizli");
   }
 };
 $("sifre").addEventListener("keydown", e => { if (e.key === "Enter") $("giris-btn").click(); });
 $("cikis-btn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$("sifre-btn").onclick = () => sifremiDegistir();
+try { $("beni-hatirla").checked = localStorage.getItem("beni_hatirla") !== "0"; } catch {}
 
 sb.auth.onAuthStateChange((_e, oturum) => { if (oturum) baslat(); });
 (async () => { const { data } = await sb.auth.getSession(); if (data.session) baslat(); })();
@@ -359,12 +383,14 @@ async function modulleriYukle() {
       kadinM.map(m => `<button data-id="${m.id}">${m.ad}</button>`).join("");
   }
   html += `<div class="menu-baslik">Genel</div><button data-id="talepler">Talepler</button>`;
-  if (yonetici()) html += `<button data-id="yonetim">Yönetim</button>`;
+  if (yonetici()) html += `<button data-id="yonetim">Modüller</button>`;
+  if (tamYetkili()) html += `<div class="menu-baslik">Yönetici</div><button data-id="kullanicilar">Kullanıcılar</button>`;
   $("menu").innerHTML = html;
 
   $("menu").querySelectorAll("button").forEach(b => {
     b.onclick = () => b.dataset.id === "talepler" ? talepleriAc()
                     : b.dataset.id === "yonetim"  ? yonetimAc()
+                    : b.dataset.id === "kullanicilar" ? kullanicilarAc()
                     : modulSec(b.dataset.id);
   });
 
@@ -1298,6 +1324,205 @@ async function borcSil(b) {
 }
 
 /* =====================================================================
+   KULLANICILAR — sadece erkek Başkan/Müdür. Kullanıcı adı + şifre ile hesap
+   açma, görev / kol / çalışma yeri, şifre sıfırlama, güncel şifreleri görme.
+   Giriş sistemi e-posta istediği için kullanıcı adına @vakif.local eklenir.
+   ===================================================================== */
+const GIRIS_ALANI = "vakif.local";
+const YER_AD = { sube: "Şube", dergah: "Dergah" };
+const kullaniciAdiUret = ad => ad.toLowerCase().trim()
+  .replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s").replace(/ı/g,"i").replace(/i̇/g,"i")
+  .replace(/ö/g,"o").replace(/ç/g,"c").replace(/[^a-z0-9]+/g,".").replace(/^\.|\.$/g,"");
+let kulListe = [], kulSifreler = {}, kulModuller = [];
+
+async function kullanicilarAc() {
+  aktifModul = null;
+  menuIsaretle("kullanicilar");
+  $("modul-ad").textContent = "Kullanıcılar";
+  $("modul-aciklama").textContent = "Hesap aç, görev ve yetki ver, şifre sıfırla";
+  $("ozet").classList.add("gizli"); $("ara").classList.add("gizli");
+  $("ekle-btn").textContent = "+ Yeni Kullanıcı"; $("ekle-btn").classList.remove("gizli");
+  $("ekle-btn").onclick = () => kullaniciFormu(null);
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+
+  const [{ data: kullar, error }, { data: sifreler }, { data: mods }] = await Promise.all([
+    sb.from("kullanicilar").select("*").order("kol").order("gorev").order("ad_soyad"),
+    sb.from("kullanici_sifreleri").select("*"),
+    sb.from("moduller").select("*").order("sira")
+  ]);
+  if (error && /kullanici_adi|calisma_yeri|kullanici_sifreleri/.test(error.message)) {
+    $("icerik").innerHTML = `<div class="tablo-kutu"><div class="bos">Kullanıcı yönetimi için veritabanı hazırlığı yapılmamış.<br>
+      <b>05_kullanici_yonetimi.sql</b> dosyasını Supabase &gt; SQL Editor'da bir kez çalıştırın.</div></div>`; return;
+  }
+  if (error) { $("icerik").innerHTML = `<div class="bos">Yüklenemedi: ${kacir(error.message)}</div>`; return; }
+  kulListe = kullar || []; kulModuller = mods || [];
+  kulSifreler = Object.fromEntries((sifreler || []).map(s => [s.kullanici_id, s]));
+  if (!("kullanici_adi" in (kulListe[0] || { kullanici_adi: 1 }))) {
+    $("icerik").innerHTML = `<div class="tablo-kutu"><div class="bos">Kullanıcı yönetimi için veritabanı hazırlığı yapılmamış.<br>
+      <b>05_kullanici_yonetimi.sql</b> dosyasını Supabase &gt; SQL Editor'da bir kez çalıştırın.</div></div>`; return;
+  }
+
+  const grup = kol => kulListe.filter(k => k.kol === kol);
+  const satir = k => { const s = kulSifreler[k.id]; return `<tr>
+    <td><b>${kacir(k.ad_soyad)}</b>${k.telefon ? `<span class="hucre-alt">${kacir(k.telefon)}</span>` : ""}</td>
+    <td><code style="font-size:12.5px">${kacir(k.kullanici_adi || "—")}</code></td>
+    <td>${GOREV_AD[k.gorev]}</td>
+    <td>${YER_AD[k.calisma_yeri] || "—"}</td>
+    <td>${s ? `<span class="sifre-gizli" data-sifre="${kacir(s.sifre)}">••••••••</span>
+        <button class="btn ikincil kucuk" data-goster="${k.id}" title="Göster / gizle">👁</button>
+        <span class="hucre-alt">${tarihYaz(s.guncellendi)}</span>` : `<span style="color:var(--soluk);font-size:12px">bilinmiyor</span>`}</td>
+    <td><span class="rozet ${k.aktif ? "kapali" : "acik"}">${k.aktif ? "Aktif" : "Kapalı"}</span></td>
+    <td class="sag" style="white-space:nowrap">
+      <button class="btn ikincil kucuk" data-duzenle="${k.id}">Düzenle</button>
+      <button class="btn ikincil kucuk" data-sifre-sifirla="${k.id}">Şifre Sıfırla</button>
+      <button class="btn ikincil kucuk" data-yetki="${k.id}">Yetkiler</button>
+      ${k.id !== ben.id ? `<button class="btn ikincil kucuk" data-durum="${k.id}">${k.aktif ? "Kapat" : "Aç"}</button>
+        <button class="btn tehlike kucuk" data-sil="${k.id}">Sil</button>` : ""}
+    </td></tr>`; };
+  const tablo = (baslik, liste) => `<div class="kira-bolum">${baslik} (${liste.length})</div>
+    <div class="tablo-kutu"><table>
+      <thead><tr><th>Ad Soyad</th><th>Kullanıcı Adı</th><th>Görev</th><th>Çalıştığı Yer</th><th>Şifre</th><th>Durum</th><th class="sag">İşlem</th></tr></thead>
+      <tbody>${liste.length ? liste.map(satir).join("") : `<tr><td colspan="7" class="bos" style="padding:18px">Kullanıcı yok.</td></tr>`}</tbody></table></div>`;
+
+  $("icerik").innerHTML = `
+    <div style="font-size:12.5px;color:var(--soluk);background:#E8F6F6;padding:10px 13px;border-radius:7px;margin-bottom:14px;line-height:1.5">
+      Kullanıcı <b>kullanıcı adı + şifre</b> ile giriş yapar, e-posta gerekmez. Görevine ve koluna göre modülleri otomatik görür;
+      ek modül için <b>Yetkiler</b>. Şifre sütununda kullanıcının güncel şifresi durur (kendisi değiştirse de güncellenir).
+    </div>
+    ${tablo("Erkek Kolu", grup("erkek"))}
+    ${tablo("Kadın Kolu", grup("kadin"))}`;
+
+  const bul = id => kulListe.find(k => k.id === id);
+  $("icerik").querySelectorAll("[data-goster]").forEach(b => b.onclick = () => {
+    const el = b.previousElementSibling; const acik = el.textContent !== "••••••••";
+    el.textContent = acik ? "••••••••" : el.dataset.sifre; });
+  $("icerik").querySelectorAll("[data-duzenle]").forEach(b => b.onclick = () => kullaniciFormu(bul(b.dataset.duzenle)));
+  $("icerik").querySelectorAll("[data-sifre-sifirla]").forEach(b => b.onclick = () => sifreSifirlaFormu(bul(b.dataset.sifreSifirla)));
+  $("icerik").querySelectorAll("[data-yetki]").forEach(b => b.onclick = () => yetkiFormu(bul(b.dataset.yetki), kulModuller));
+  $("icerik").querySelectorAll("[data-durum]").forEach(b => b.onclick = async () => {
+    const k = bul(b.dataset.durum);
+    const { error } = await sb.from("kullanicilar").update({ aktif: !k.aktif }).eq("id", k.id);
+    if (error) alert("Değiştirilemedi: " + error.message); kullanicilarAc(); });
+  $("icerik").querySelectorAll("[data-sil]").forEach(b => b.onclick = async () => {
+    const k = bul(b.dataset.sil);
+    if (!confirm(`"${k.ad_soyad}" kullanıcısı ve giriş hesabı kalıcı olarak silinecek. Kayıtları kalır. Emin misiniz?`)) return;
+    const { error } = await sb.rpc("kullanici_sil", { p_kullanici: k.id });
+    if (error) { alert("Silinemedi: " + error.message); return; }
+    kullanicilarAc(); });
+}
+
+/* --- yeni kullanıcı / düzenle --- */
+function kullaniciFormu(kul) {
+  borcPencereSifirla();
+  const yeni = !kul; const k = kul || {};
+  const sec = (id, obj, secili) => `<select id="${id}">${Object.entries(obj).map(([v, a]) =>
+    `<option value="${v}" ${v === secili ? "selected" : ""}>${a}</option>`).join("")}</select>`;
+  $("form-baslik").textContent = yeni ? "Yeni Kullanıcı" : `Düzenle — ${k.ad_soyad}`;
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Ad Soyad <span style="color:var(--kirmizi)">*</span></label>
+      <input id="y-ad" value="${kacir(k.ad_soyad || "")}" placeholder="Ahmet Yılmaz"></div>
+    <div class="alan"><label>Kullanıcı adı <span style="color:var(--kirmizi)">*</span></label>
+      <input id="y-kadi" value="${kacir(k.kullanici_adi || "")}" placeholder="ahmet.yilmaz" ${yeni ? "" : "disabled"} autocomplete="off">
+      ${yeni ? `<div class="kur-ipucu">Ad yazınca kendiliğinden oluşur, değiştirebilirsin. Sadece küçük harf, rakam ve nokta.</div>` : `<div class="kur-ipucu">Kullanıcı adı sonradan değişmez.</div>`}</div>
+    <div class="alan"><label>Telefon</label><input id="y-tel" value="${kacir(k.telefon || "")}" placeholder="05xx"></div>
+    <div class="alan"><label>Kol <span style="color:var(--kirmizi)">*</span></label>${sec("y-kol", KOL_AD, k.kol || "erkek")}</div>
+    <div class="alan"><label>Görev <span style="color:var(--kirmizi)">*</span></label>${sec("y-gorev", GOREV_AD, k.gorev || "vekil")}</div>
+    <div class="alan"><label>Çalıştığı yer <span style="color:var(--kirmizi)">*</span></label>${sec("y-yer", YER_AD, k.calisma_yeri || "sube")}</div>
+    ${yeni ? `<div class="alan"><label>Şifre <span style="color:var(--kirmizi)">*</span></label>
+      <div style="display:flex;gap:8px"><input id="y-sifre" value="${sifreUret()}" autocomplete="new-password">
+      <button type="button" class="btn ikincil kucuk" id="y-yeni-sifre" style="white-space:nowrap">Yenile</button></div>
+      <div class="kur-ipucu">En az 6 karakter. İstersen elle yaz.</div></div>` : ""}
+    <div class="genis" style="font-size:12px;color:var(--soluk);background:#F1F6F6;padding:9px 12px;border-radius:6px;line-height:1.5">
+      <b>Görevler:</b> Başkan / Müdür her şeyi görür (kadın koldaysa sadece kadın kolunu). Ticaret, Sosyal, Dergi kendi modülünü görür.
+      Vekil sadece okur. Ek modül için kaydettikten sonra <b>Yetkiler</b>.</div>`;
+  if (yeni) {
+    let elleDegisti = false;
+    $("y-kadi").oninput = () => { elleDegisti = true; $("y-kadi").value = kullaniciAdiUret($("y-kadi").value + " ").replace(/\.$/, "") ; };
+    $("y-ad").oninput = () => { if (!elleDegisti) $("y-kadi").value = kullaniciAdiUret($("y-ad").value); };
+    $("y-yeni-sifre").onclick = () => { $("y-sifre").value = sifreUret(); };
+  }
+  $("form-kaydet").textContent = yeni ? "Kullanıcıyı Oluştur" : "Kaydet";
+  $("form-kaydet").onclick = async () => {
+    const ad = $("y-ad").value.trim(), kadi = kullaniciAdiUret($("y-kadi").value), tel = $("y-tel").value.trim() || null;
+    const kol = $("y-kol").value, gorev = $("y-gorev").value, yer = $("y-yer").value;
+    if (!ad || !kadi) { alert("Ad Soyad ve kullanıcı adı gerekli."); return; }
+    if (!yeni) {
+      $("form-kaydet").textContent = "Kaydediliyor…";
+      const { error } = await sb.from("kullanicilar").update({ ad_soyad: ad, telefon: tel, kol, gorev, calisma_yeri: yer }).eq("id", kul.id);
+      $("form-kaydet").textContent = "Kaydet";
+      if (error) { alert("Kaydedilemedi: " + error.message); return; }
+      $("perde").classList.add("gizli"); kullanicilarAc(); return;
+    }
+    const sifre = $("y-sifre").value;
+    if (sifre.length < 6) { alert("Şifre en az 6 karakter olmalı."); return; }
+    if (kulListe.some(x => (x.kullanici_adi || "").toLowerCase() === kadi)) { alert("Bu kullanıcı adı zaten var."); return; }
+    $("form-kaydet").textContent = "Oluşturuluyor…";
+    const eposta = `${kadi}@${GIRIS_ALANI}`;
+    const { data, error } = await sbKayit.auth.signUp({ email: eposta, password: sifre });
+    if (error || !data?.user) { $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
+      alert("Hesap açılamadı: " + (error?.message || "bilinmeyen hata")); return; }
+    const { error: e2 } = await sb.from("kullanicilar").insert({ id: data.user.id, ad_soyad: ad, telefon: tel, kol, gorev, kullanici_adi: kadi, calisma_yeri: yer });
+    if (e2) { $("form-kaydet").textContent = "Kullanıcıyı Oluştur"; alert("Hesap açıldı ama kullanıcı kaydı yapılamadı: " + e2.message); return; }
+    await sb.from("kullanici_sifreleri").upsert({ kullanici_id: data.user.id, sifre, guncelleyen: ben.id, guncellendi: new Date().toISOString() });
+    await sbKayit.auth.signOut();
+    $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
+    $("perde").classList.add("gizli");
+    alert(`Kullanıcı oluşturuldu.\n\nAd: ${ad}\nKullanıcı adı: ${kadi}\nŞifre: ${sifre}\n\nBu bilgileri kullanıcıya ilet. Şifre Kullanıcılar ekranında da görünür.`);
+    kullanicilarAc();
+  };
+  $("perde").classList.remove("gizli");
+}
+
+/* --- yönetici şifre sıfırlar --- */
+function sifreSifirlaFormu(kul) {
+  borcPencereSifirla();
+  $("form-baslik").textContent = `Şifre Sıfırla — ${kul.ad_soyad}`;
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Yeni şifre</label>
+      <div style="display:flex;gap:8px"><input id="ss-sifre" value="${sifreUret()}" autocomplete="new-password">
+      <button type="button" class="btn ikincil kucuk" id="ss-yenile" style="white-space:nowrap">Yenile</button></div>
+      <div class="kur-ipucu">En az 6 karakter. Kullanıcının eski şifresi anında geçersiz olur.</div></div>`;
+  $("ss-yenile").onclick = () => { $("ss-sifre").value = sifreUret(); };
+  $("form-kaydet").textContent = "Şifreyi Değiştir";
+  $("form-kaydet").onclick = async () => {
+    const sifre = $("ss-sifre").value;
+    if (sifre.length < 6) { alert("Şifre en az 6 karakter olmalı."); return; }
+    $("form-kaydet").textContent = "Değiştiriliyor…";
+    const { error } = await sb.rpc("sifre_sifirla", { p_kullanici: kul.id, p_sifre: sifre });
+    $("form-kaydet").textContent = "Şifreyi Değiştir";
+    if (error) { alert("Değiştirilemedi: " + error.message); return; }
+    $("perde").classList.add("gizli");
+    alert(`${kul.ad_soyad} için yeni şifre: ${sifre}\n\nKullanıcıya ilet.`);
+    kullanicilarAc();
+  };
+  $("perde").classList.remove("gizli");
+}
+
+/* --- kullanıcı kendi şifresini değiştirir (kenar çubuğu) --- */
+function sifremiDegistir() {
+  borcPencereSifirla();
+  $("form-baslik").textContent = "Şifremi Değiştir";
+  $("form-govde").innerHTML = `
+    <div class="alan genis"><label>Yeni şifre</label><input type="password" id="sd-1" autocomplete="new-password"></div>
+    <div class="alan genis"><label>Yeni şifre (tekrar)</label><input type="password" id="sd-2" autocomplete="new-password"></div>
+    <div class="genis kur-ipucu">En az 6 karakter. Değiştirdikten sonra bu şifreyle giriş yaparsınız.</div>`;
+  $("form-kaydet").textContent = "Şifreyi Değiştir";
+  $("form-kaydet").onclick = async () => {
+    const a = $("sd-1").value, b = $("sd-2").value;
+    if (a.length < 6) { alert("Şifre en az 6 karakter olmalı."); return; }
+    if (a !== b) { alert("İki şifre aynı değil."); return; }
+    $("form-kaydet").textContent = "Değiştiriliyor…";
+    const { error } = await sb.auth.updateUser({ password: a });
+    $("form-kaydet").textContent = "Şifreyi Değiştir";
+    if (error) { alert("Değiştirilemedi: " + error.message); return; }
+    await sb.rpc("sifre_notu_guncelle", { p_sifre: a });
+    $("perde").classList.add("gizli");
+    alert("Şifreniz değişti.");
+  };
+  $("perde").classList.remove("gizli");
+}
+
+/* =====================================================================
    YÖNETİM PANELİ — kullanıcılar, yetkiler, modüller
    ===================================================================== */
 
@@ -1323,37 +1548,16 @@ function sifreUret() {
 async function yonetimAc() {
   aktifModul = null;
   menuIsaretle("yonetim");
-  $("modul-ad").textContent = "Yönetim";
-  $("modul-aciklama").textContent = "Kullanıcılar, yetkiler ve modüller";
+  $("modul-ad").textContent = "Modüller";
+  $("modul-aciklama").textContent = "Modül ekle, aç / kapat. Kullanıcılar için soldaki Kullanıcılar ekranı.";
   $("ozet").classList.add("gizli");
   $("ekle-btn").classList.add("gizli");
   $("ara").classList.add("gizli");
   $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
-
-  const [{ data: kullar }, { data: mods }] = await Promise.all([
-    sb.from("kullanicilar").select("*").order("kol").order("gorev"),
-    sb.from("moduller").select("*").order("sira")
-  ]);
+  const { data: mods } = await sb.from("moduller").select("*").order("sira");
 
   $("icerik").innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px">
-      <h2 style="font-size:15px">Kullanıcılar (${(kullar||[]).length})</h2>
-      ${tamYetkili() ? `<button class="btn kucuk" id="kul-ekle">+ Kullanıcı Ekle</button>` : ""}
-    </div>
-    <div class="tablo-kutu"><table>
-      <thead><tr><th>Ad Soyad</th><th>Kol</th><th>Görev</th><th>Durum</th><th class="sag">İşlem</th></tr></thead>
-      <tbody>${(kullar||[]).map(k => `<tr>
-        <td><b>${k.ad_soyad}</b></td>
-        <td>${KOL_AD[k.kol]}</td>
-        <td>${GOREV_AD[k.gorev]}</td>
-        <td><span class="rozet ${k.aktif ? "kapali" : "acik"}">${k.aktif ? "Aktif" : "Kapalı"}</span></td>
-        <td class="sag">
-          <button class="btn ikincil kucuk" data-yetki="${k.id}">Yetkiler</button>
-          ${tamYetkili() && k.id !== ben.id
-            ? `<button class="btn ikincil kucuk" data-durum="${k.id}">${k.aktif ? "Kapat" : "Aç"}</button>` : ""}
-        </td></tr>`).join("")}</tbody></table></div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:26px 0 12px">
       <h2 style="font-size:15px">Modüller (${(mods||[]).length})</h2>
       ${tamYetkili() ? `<button class="btn kucuk" id="mod-ekle">+ Modül Ekle</button>` : ""}
     </div>
@@ -1368,16 +1572,7 @@ async function yonetimAc() {
           ? `<button class="btn ikincil kucuk" data-mdurum="${m.id}">${m.aktif ? "Kapat" : "Aç"}</button>` : "—"}</td>
       </tr>`).join("")}</tbody></table></div>`;
 
-  if ($("kul-ekle")) $("kul-ekle").onclick = kullaniciEkleFormu;
   if ($("mod-ekle")) $("mod-ekle").onclick = modulEkleFormu;
-  $("icerik").querySelectorAll("[data-yetki]").forEach(b =>
-    b.onclick = () => yetkiFormu(kullar.find(k => k.id === b.dataset.yetki), mods));
-  $("icerik").querySelectorAll("[data-durum]").forEach(b =>
-    b.onclick = async () => {
-      const k = kullar.find(x => x.id === b.dataset.durum);
-      await sb.from("kullanicilar").update({ aktif: !k.aktif }).eq("id", k.id);
-      yonetimAc();
-    });
   $("icerik").querySelectorAll("[data-mdurum]").forEach(b =>
     b.onclick = async () => {
       const m = mods.find(x => x.id === b.dataset.mdurum);
@@ -1386,52 +1581,9 @@ async function yonetimAc() {
     });
 }
 
-/* ---------------- KULLANICI EKLE ---------------- */
-function kullaniciEkleFormu() {
-  $("form-baslik").textContent = "Yeni Kullanıcı";
-  $("form-govde").innerHTML = `
-    <div class="alan genis"><label>Ad Soyad *</label><input id="y-ad" placeholder="Ahmet Yılmaz"></div>
-    <div class="alan genis"><label>E-posta *</label><input id="y-eposta" type="email" placeholder="ahmet@ornek.com"></div>
-    <div class="alan"><label>Kol *</label><select id="y-kol">
-      <option value="erkek">Erkek Kolu</option><option value="kadin">Kadın Kolu</option></select></div>
-    <div class="alan"><label>Görev *</label><select id="y-gorev">
-      <option value="baskan">Başkan</option><option value="mudur">Müdür</option>
-      <option value="ticaret">Ticaret</option><option value="sosyal">Sosyal</option>
-      <option value="dergi">Dergi</option><option value="vekil">Vekil</option></select></div>
-    <div class="alan genis"><label>Şifre *</label>
-      <div style="display:flex;gap:8px"><input id="y-sifre" value="${sifreUret()}">
-      <button class="btn ikincil kucuk" id="y-yeni-sifre" style="white-space:nowrap">Yenile</button></div>
-      <div style="font-size:11.5px;color:var(--soluk);margin-top:5px">
-        Bu şifreyi kullanıcıya ilet. Kaydettikten sonra bir daha görüntülenemez.</div></div>`;
-  $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
-  $("y-yeni-sifre").onclick = () => { $("y-sifre").value = sifreUret(); };
-  $("form-kaydet").onclick = kullaniciKaydet;
-  $("perde").classList.remove("gizli");
-}
-
-async function kullaniciKaydet() {
-  const ad = $("y-ad").value.trim(), eposta = $("y-eposta").value.trim();
-  const kol = $("y-kol").value, gorev = $("y-gorev").value, sifre = $("y-sifre").value;
-  if (!ad || !eposta || sifre.length < 6) { alert("Ad, e-posta ve en az 6 karakter şifre gerekli."); return; }
-
-  $("form-kaydet").textContent = "Oluşturuluyor…";
-  const { data, error } = await sbKayit.auth.signUp({ email: eposta, password: sifre });
-  if (error) { $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
-    alert("Hesap açılamadı: " + error.message); return; }
-
-  const { error: e2 } = await sb.from("kullanicilar")
-    .insert({ id: data.user.id, ad_soyad: ad, kol, gorev });
-  $("form-kaydet").textContent = "Kullanıcıyı Oluştur";
-  if (e2) { alert("Hesap açıldı ama yetki kaydı yapılamadı: " + e2.message); return; }
-
-  await sbKayit.auth.signOut();
-  $("perde").classList.add("gizli");
-  alert(`Kullanıcı oluşturuldu.\n\nAd: ${ad}\nE-posta: ${eposta}\nŞifre: ${sifre}\n\nBu bilgileri kullanıcıya ilet. Şifre bir daha gösterilmeyecek.`);
-  yonetimAc();
-}
-
 /* ---------------- YETKİLER ---------------- */
 async function yetkiFormu(kul, mods) {
+  borcPencereSifirla();
   const { data: izinler } = await sb.from("modul_izinleri")
     .select("*").eq("kullanici_id", kul.id);
   const izin = Object.fromEntries((izinler || []).map(i => [i.modul_id, i]));
@@ -1483,6 +1635,7 @@ async function yetkiFormu(kul, mods) {
 
 /* ---------------- MODÜL EKLE ---------------- */
 function modulEkleFormu() {
+  borcPencereSifirla();
   $("form-baslik").textContent = "Yeni Modül";
   $("form-govde").innerHTML = `
     <div class="alan genis"><label>Modül Adı *</label><input id="m-ad" placeholder="Aidat Ödemeleri"></div>

@@ -112,6 +112,20 @@ Eski Excel'den gelen 4 Ümit Çelik çeki yeni yapıya taşındı; notlardaki ö
 Kaynağı bilinmeyen ödemelerde odeyen = "Bilinmiyor (düzeltilecek)".
 **Anlık kur:** `kurCek()` → https://finans.truncgil.com/v4/today.json (ücretsiz, anahtarsız, CORS açık; 10 dk önbellek), yedek open.er-api.com (sadece USD/EUR). Satış fiyatı kullanılır. Form açılınca kur alanı boşsa otomatik dolar, "Kullan" ile güncellenir; listede açık altın/döviz kalanların bugünkü değeri gösterilir.
 
+## Kullanıcı Yönetimi (8 Eylül 2026)
+
+Menüde en altta **Kullanıcılar** (sadece erkek Başkan/Müdür = `tamYetkili()`). `kullanicilarAc()`.
+- Giriş **kullanıcı adı + şifre** ile; Supabase e-posta istediği için hesap `kullaniciadi@vakif.local` olarak açılır.
+  Giriş ekranı `kullanici_eposta()` RPC ile kullanıcı adını e-postaya çevirir; eski hotmail hesapları da çalışır.
+- `kullanicilar.kullanici_adi`, `kullanicilar.calisma_yeri` ('sube'|'dergah') kolonları 05 SQL ile eklendi.
+- Şifre sıfırlama: `sifre_sifirla(uuid, text)` security definer, auth.users'ı günceller. Sadece tam yetkili.
+- Güncel şifreler `kullanici_sifreleri` tablosunda düz metin; RLS ile sadece tam yetkili okur.
+  Kullanıcı "Şifremi değiştir" (kenar çubuğu) ile değiştirince `sifre_notu_guncelle()` notu günceller.
+  Kullanıcının bilinçli tercihi; güvenlik açısından zayıf olduğu söylendi.
+- Kullanıcı silme: `kullanici_sil(uuid)` auth.users'tan siler, kullanicilar cascade.
+- "Beni hatırla": işaretliyse oturum localStorage'da kalıcı, değilse sessionStorage (tarayıcı kapanınca biter).
+- Eski "Yönetim" ekranı artık sadece **Modüller**; Yetkiler düğmesi Kullanıcılar ekranında.
+
 ## Görsel Kimlik
 
 - Marka rengi: **#4BBFC2** (Semerkand logosundan piksel olarak ölçüldü)
@@ -130,7 +144,8 @@ Kaynağı bilinmeyen ödemelerde odeyen = "Bilinmiyor (düzeltilecek)".
 | `01_vakif_semasi.sql` | Veritabanı kurulumu (bir kez çalıştırılır) |
 | `02_ilk_kurulum.sql` | İlk kullanıcının kendini Müdür yapması (bir kez) |
 | `03_excel_verileri.sql` | Excel verilerini veritabanına aktarma sorgusu (bir kez) |
-| `04_kira_modulu.sql` | Kira Takip modülü: 4 dergah + son 12 ayın ödemeleri (bir kez) |
+| `04_kira_modulu.sql` | Kira Takip modülü: 5 dergah + son 12 ayın ödemeleri (bir kez) |
+| `05_kullanici_yonetimi.sql` | Kullanıcı adı ile giriş, çalışma yeri, şifre sıfırlama fonksiyonları, şifre notları tablosu (bir kez) |
 | `CLAUDE.md` | Bu dosya |
 | `DEVLOG.md` | Ne yapıldı, ne kaldı |
 
