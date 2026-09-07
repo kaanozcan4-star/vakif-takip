@@ -46,7 +46,8 @@ BEGIN
       ('Erkek Merkez Dergahı',   'Kurtköy Merkez', 'erkek', 1),
       ('Kadın Merkez Dergahı',   '',          'kadin', 2),
       ('Aydos Kadın Dergahı',    'Aydos',     'kadin', 3),
-      ('Çınardere Kadın Dergahı','Çınardere', 'kadin', 4)
+      ('Çınardere Kadın Dergahı','Çınardere', 'kadin', 4),
+      ('Velibaba Kadın Dergahı', 'Velibaba',  'kadin', 5)
     ) AS t(ad, adres, kol, sira)
   LOOP
     INSERT INTO kayitlar (modul_id, kol, baslik, veri, olusturan)
@@ -78,7 +79,7 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  RAISE NOTICE 'Kira modülü kuruldu: 4 dergah, 48 geçmiş ödeme';
+  RAISE NOTICE 'Kira modülü kuruldu: 5 dergah, 60 geçmiş ödeme';
 END $$;
 
 -- Kontrol: dergahlar ve ödeme sayısı
