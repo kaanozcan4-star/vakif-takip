@@ -118,6 +118,7 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
 .kira-durum .gun{font-size:15px}
 .kira-kart.gecikti .kira-durum{color:var(--kirmizi)}
 .kira-kart.odendi .kira-durum{color:#2E9E5B}
+.kira-not{font-size:12.5px;font-weight:600;color:#8A6410;background:#FDF3DC;padding:6px 9px;border-radius:6px}
 .kira-son{font-size:12px;color:var(--soluk);border-top:1px dashed var(--cizgi);padding-top:8px}
 .kira-son b{color:var(--murekkep)}
 .kira-kart .islem{display:flex;gap:7px;margin-top:2px}
@@ -697,6 +698,7 @@ function kiraCiz() {
         <span class="gun">${d.gunMetni}</span>
       </div>
       <div style="font-size:12px;color:var(--soluk)">Vade: ${tarihYaz(d.vade)}</div>
+      ${v.not_metni ? `<div class="kira-not">⚠ ${kacir(v.not_metni)}</div>` : ""}
       <div class="kira-son">${son
         ? `Son ödeme: <b>${donemYaz(son.veri.donem)}</b> · ${tarihYaz(son.veri.tarih)} · <b>${kacir(son.veri.odeyen)}</b>${son.veri.tutar ? " · " + paraYaz(son.veri.tutar) : ""}`
         : "Henüz ödeme kaydı yok"}</div>
@@ -826,7 +828,9 @@ function kiraYerFormu(yer) {
         <option value="kadin" ${(yer?.kol || ben.kol) === "kadin" ? "selected" : ""}>Kadın Kolu</option></select></div>
     <div class="alan"><label>Durum</label>
       <select id="ky-aktif"><option value="1" ${v.aktif !== false ? "selected" : ""}>Takip ediliyor</option>
-        <option value="0" ${v.aktif === false ? "selected" : ""}>Pasif (artık kira yok)</option></select></div>`;
+        <option value="0" ${v.aktif === false ? "selected" : ""}>Pasif (artık kira yok)</option></select></div>
+    <div class="alan genis"><label>Not (kartta uyarı olarak görünür)</label>
+      <input type="text" id="ky-not" value="${kacir(v.not_metni || "")}" placeholder="örn. Zam dönemi geldi"></div>`;
   $("form-kaydet").textContent = "Kaydet";
   $("form-kaydet").onclick = async () => {
     const ad = $("ky-ad").value.trim();
@@ -835,7 +839,8 @@ function kiraYerFormu(yer) {
     const veri = { tip: "yer", ad, adres: $("ky-adres").value.trim(),
       tutar: tutarStr !== "" ? Number(tutarStr) : null,
       vade_gunu: Number($("ky-gun").value) || 5,
-      sira: v.sira ?? (kiraYerler.length + 1), aktif: $("ky-aktif").value === "1" };
+      sira: v.sira ?? (kiraYerler.length + 1), aktif: $("ky-aktif").value === "1",
+      not_metni: $("ky-not").value.trim() || null };
     const kol = kolSecilebilir ? $("ky-kol").value : ben.kol;
     $("form-kaydet").textContent = "Kaydediliyor…";
     const { error } = yer
