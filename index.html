@@ -138,6 +138,8 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
 .yon.borc{background:#FBEAE7;color:var(--kirmizi)}
 .yon.alacak{background:#E4F1E9;color:var(--yesil-2)}
 .ozet .alt{font-size:11.5px;color:var(--soluk);margin-top:2px}
+.kur-ipucu{font-size:12px;color:var(--soluk);margin-top:5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kur-ipucu b{color:var(--murekkep)}
 .detay-kutu{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;background:#F1F6F6;padding:12px 14px;border-radius:8px;font-size:13px}
 .detay-kutu .dt span{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--soluk);font-weight:700}
 .detay-kutu .dt:last-child{grid-column:1/-1}
@@ -892,8 +894,37 @@ async function kiraSil(id, ne) {
    ===================================================================== */
 const BORC_KODLARI = ["borclar", "k_borclar"];
 const KALEMLER = { tl:"Nakit TL", altin:"Altın", usd:"Dolar (USD)", eur:"Euro (EUR)", cek:"Çek", senet:"Senet", esya:"Eşya / Mal" };
-const ALTIN_CINSLERI = ["Çeyrek","Yarım","Tam","Ata","Cumhuriyet","Reşat","Gremse","Gram (24 ayar)","Gram (22 ayar)","Bilezik (gram)","Diğer"];
-const YONTEMLER = { nakit:"Nakit", havale:"Havale / EFT", altin:"Altın", doviz:"Döviz", mahsup:"Mahsup (gelirden düşüldü)", diger:"Diğer" };
+const ALTIN_CINSLERI = ["Çeyrek","Yarım","Tam","Ata","Cumhuriyet","Reşat","Hamit","Gremse","İkibuçuk","Beşli","Gram (24 ayar)","Gram (22 ayar)","Bilezik (gram)","Diğer"];
+// Anlık kur — finans.truncgil.com (ücretsiz, anahtarsız). Satış fiyatı kullanılır: borç altınsa geri almak için ödenecek fiyat.
+const KUR_ANAHTAR = { "Çeyrek":"CEYREKALTIN","Yarım":"YARIMALTIN","Tam":"TAMALTIN","Ata":"ATAALTIN","Cumhuriyet":"CUMHURIYETALTINI",
+  "Reşat":"RESATALTIN","Hamit":"HAMITALTIN","Gremse":"GREMSEALTIN","İkibuçuk":"IKIBUCUKALTIN","Beşli":"BESLIALTIN",
+  "Gram (24 ayar)":"GRA","Gram (22 ayar)":"YIA","Bilezik (gram)":"YIA", usd:"USD", eur:"EUR" };
+let canliKur = null;   // { veri:{...}, zaman:"...", alindi: Date }
+async function kurCek(zorla) {
+  if (!zorla && canliKur && Date.now() - canliKur.alindi < 10 * 60 * 1000) return canliKur;
+  try {
+    const r = await fetch("https://finans.truncgil.com/v4/today.json", { cache: "no-store" });
+    const d = await r.json();
+    canliKur = { veri: d, zaman: d.Update_Date || "", alindi: Date.now(), kaynak: "truncgil" };
+  } catch (e) {
+    try {   // yedek: sadece dolar / euro
+      const r = await fetch("https://open.er-api.com/v6/latest/USD");
+      const d = await r.json(); const usd = d.rates?.TRY, eur = usd / d.rates?.EUR;
+      canliKur = { veri: { USD: { Selling: usd }, EUR: { Selling: eur } }, zaman: d.time_last_update_utc || "", alindi: Date.now(), kaynak: "er-api" };
+    } catch (e2) { canliKur = null; }
+  }
+  return canliKur;
+}
+// kalem: 'altin' | 'usd' | 'eur' ; cins: altın cinsi
+function canliBirimKur(kalem, cins) {
+  if (!canliKur) return null;
+  const k = kalem === "altin" ? KUR_ANAHTAR[cins] : KUR_ANAHTAR[kalem];
+  const v = k && canliKur.veri[k];
+  const f = v && Number(v.Selling ?? v.Satış ?? v.satis);
+  return f && isFinite(f) && f > 0 ? f : null;
+}
+const kurZamanYaz = () => canliKur?.zaman ? ` · ${canliKur.zaman.slice(0, 16).replace("T", " ")}` : "";
+const YONTEMLER = { nakit:"Nakit", havale:"Havale / EFT", altin:"Altın", usd:"Dolar (USD)", eur:"Euro (EUR)", mahsup:"Mahsup (gelirden düşüldü)", diger:"Diğer" };
 let borcModul = null, borcListe = [], borcOdemeler = [], borcFiltre = "tumu";
 
 // Eski (genel tablo) kayıtları yeni yapıya çevir — veritabanı değişmez, sadece ekranda
@@ -918,7 +949,7 @@ function borcHesap(b) {
       .reduce((s, o) => s + (Number(o.veri.miktar) || 0), 0);
     miktarKalan = Math.max(0, Number(v.miktar) - miktarOdenen);
   } else if ((v.kalem === "usd" || v.kalem === "eur") && v.miktar) {
-    miktarOdenen = od.filter(o => o.veri.yontem === "doviz").reduce((s, o) => s + (Number(o.veri.miktar) || 0), 0);
+    miktarOdenen = od.filter(o => o.veri.yontem === v.kalem || o.veri.yontem === "doviz").reduce((s, o) => s + (Number(o.veri.miktar) || 0), 0);
     miktarKalan = Math.max(0, Number(v.miktar) - miktarOdenen);
   }
   const bugun = new Date(); bugun.setHours(0,0,0,0);
@@ -936,6 +967,8 @@ const neAlindi = v => {
 };
 const neIle = v => {
   if (v.yontem === "altin") return `${v.miktar || ""} ${v.altin_cinsi || ""} altın`.trim();
+  if (v.yontem === "usd") return `${v.miktar || ""} $`.trim();
+  if (v.yontem === "eur") return `${v.miktar || ""} €`.trim();
   if (v.yontem === "doviz") return `${v.miktar || ""} döviz`.trim();
   return YONTEMLER[v.yontem] || v.yontem || "—";
 };
@@ -952,7 +985,8 @@ async function borcAc(m) {
     sb.rpc("modul_yazabilir", { p_modul: m.id }),
     sb.rpc("modul_silebilir", { p_modul: m.id }),
     sb.from("kayitlar").select("*, kullanicilar!kayitlar_olusturan_fkey(ad_soyad)")
-      .eq("modul_id", m.id).order("olusturuldu", { ascending: false })
+      .eq("modul_id", m.id).order("olusturuldu", { ascending: false }),
+    kurCek()
   ]);
   if (error) { $("icerik").innerHTML = `<div class="bos">Yüklenemedi: ${kacir(error.message)}</div>`; return; }
   yazabilir = !!y; silebilir = !!s;
@@ -973,11 +1007,12 @@ function borcCiz() {
   const acik = borcListe.filter(b => hesaplar.get(b.id).durum !== "Kapandı");
   const toplam = (yon, alan) => borcListe.filter(b => b.veri.yon === yon).reduce((s, b) => s + hesaplar.get(b.id)[alan], 0);
   const altinOzet = yon => {
-    const t = {};
-    acik.filter(b => b.veri.yon === yon && b.veri.kalem === "altin").forEach(b => {
-      const h = hesaplar.get(b.id); const c = b.veri.altin_cinsi || "Altın";
-      if (h.miktarKalan) t[c] = (t[c] || 0) + h.miktarKalan; });
-    return Object.entries(t).map(([c, n]) => `${n} ${c}`).join(", ");
+    const t = {}; let bugunku = 0;
+    acik.filter(b => b.veri.yon === yon && ["altin","usd","eur"].includes(b.veri.kalem)).forEach(b => {
+      const h = hesaplar.get(b.id); const c = b.veri.kalem === "altin" ? (b.veri.altin_cinsi || "Altın") : b.veri.kalem.toUpperCase();
+      if (h.miktarKalan) { t[c] = (t[c] || 0) + h.miktarKalan; const k = canliBirimKur(b.veri.kalem, b.veri.altin_cinsi); if (k) bugunku += h.miktarKalan * k; } });
+    const m = Object.entries(t).map(([c, n]) => `${n} ${c}`).join(", ");
+    return m ? m + (bugunku ? ` (bugün ≈ ${paraYaz(bugunku)})` : "") : "";
   };
   const altinB = altinOzet("borc"), altinA = altinOzet("alacak");
   const geciken = acik.filter(b => hesaplar.get(b.id).gecikti).length;
@@ -1026,7 +1061,7 @@ function borcCiz() {
         <td>${kacir(neAlindi(v))}${v.kur && v.kalem !== "tl" ? `<span class="hucre-alt">kur: ${paraYaz(v.kur)}</span>` : ""}</td>
         <td class="sag">${paraYaz(v.tutar_tl)}</td>
         <td class="sag">${paraYaz(h.odenen)}${h.miktarOdenen ? `<span class="hucre-alt">${h.miktarOdenen} ${v.altin_cinsi || ""}</span>` : ""}</td>
-        <td class="sag" style="font-weight:700;color:${h.kalan > 0 ? "var(--kirmizi)" : "#2E9E5B"}">${paraYaz(h.kalan)}${h.miktarKalan ? `<span class="hucre-alt">${h.miktarKalan} ${v.altin_cinsi || ""}</span>` : ""}</td>
+        <td class="sag" style="font-weight:700;color:${h.kalan > 0 ? "var(--kirmizi)" : "#2E9E5B"}">${paraYaz(h.kalan)}${h.miktarKalan ? `<span class="hucre-alt">${h.miktarKalan} ${v.kalem === "altin" ? (v.altin_cinsi || "") : v.kalem.toUpperCase()}${(() => { const k = canliBirimKur(v.kalem, v.altin_cinsi); return k ? ` · bugün ≈ ${paraYaz(h.miktarKalan * k)}` : ""; })()}</span>` : ""}</td>
         <td>${tarihYaz(v.vade_tarihi)}</td>
         <td>${rozet(h)}</td>
         <td style="font-size:12px">${son ? `${kacir(son.veri.odeyen)}<span class="hucre-alt">${tarihYaz(son.veri.tarih)} · ${paraYaz(son.veri.tutar_tl)}</span>` : "—"}</td>
@@ -1118,7 +1153,8 @@ function borcFormu(b) {
     <div class="alan" id="bf-miktar-alan"><label>Miktar (adet / gram / döviz)</label>
       <input type="number" step="0.01" id="bf-miktar" value="${v.miktar ?? ""}"></div>
     <div class="alan" id="bf-kur-alan"><label>O günkü birim kur (₺)</label>
-      <input type="number" step="0.01" id="bf-kur" value="${v.kur ?? ""}" placeholder="1 adet / 1 gram / 1 $ kaç TL"></div>
+      <input type="number" step="0.01" id="bf-kur" value="${v.kur ?? ""}" placeholder="1 adet / 1 gram / 1 $ kaç TL">
+      <div class="kur-ipucu" id="bf-kur-ipucu"></div></div>
     <div class="alan"><label>TL karşılığı <span style="color:var(--kirmizi)">*</span></label>
       <input type="number" step="0.01" id="bf-tutar" value="${v.tutar_tl ?? ""}"></div>
     <div class="alan"><label>Vade tarihi</label><input type="date" id="bf-vade" value="${v.vade_tarihi || ""}"></div>
@@ -1135,7 +1171,9 @@ function borcFormu(b) {
   };
   const hesapla = () => { const m = Number($("bf-miktar").value), k = Number($("bf-kur").value);
     if (m && k && ["altin","usd","eur"].includes($("bf-kalem").value)) $("bf-tutar").value = (m * k).toFixed(2); };
-  $("bf-kalem").onchange = kalemDegisti; $("bf-miktar").oninput = hesapla; $("bf-kur").oninput = hesapla;
+  kurIpucuBagla("bf-kalem", "bf-cins", "bf-kur", "bf-kur-ipucu", hesapla, !b);
+  $("bf-kalem").onchange = () => { kalemDegisti(); kurIpucuGuncelle("bf-kalem", "bf-cins", "bf-kur", "bf-kur-ipucu", hesapla, !b); };
+  $("bf-miktar").oninput = hesapla; $("bf-kur").oninput = hesapla;
   kalemDegisti();
   $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
   $("form-kaydet").onclick = async () => {
@@ -1185,20 +1223,23 @@ function borcOdemeFormu(b) {
     <div class="alan"><label>${v.yon === "alacak" ? "Kim ödedi (karşı taraftan)" : "Kim ödedi (vakıf adına)"} <span style="color:var(--kirmizi)">*</span></label>
       <input type="text" id="bo-odeyen" value="${kacir(v.yon === "alacak" ? v.karsi_taraf : ben.ad_soyad)}"></div>
     <div class="alan"><label>Ne ile ödendi <span style="color:var(--kirmizi)">*</span></label>
-      ${sec("bo-yontem", YONTEMLER, v.kalem === "altin" ? "altin" : (v.kalem === "usd" || v.kalem === "eur") ? "doviz" : "nakit")}</div>
+      ${sec("bo-yontem", YONTEMLER, ["altin","usd","eur"].includes(v.kalem) ? v.kalem : "nakit")}</div>
     <div class="alan" id="bo-cins-alan"><label>Altın cinsi</label>${sec("bo-cins", ALTIN_CINSLERI, v.altin_cinsi, "— seçiniz —")}</div>
     <div class="alan" id="bo-miktar-alan"><label>Miktar (adet / gram / döviz)</label><input type="number" step="0.01" id="bo-miktar"></div>
-    <div class="alan" id="bo-kur-alan"><label>O günkü kur (₺)</label><input type="number" step="0.01" id="bo-kur"></div>
+    <div class="alan" id="bo-kur-alan"><label>O günkü kur (₺)</label><input type="number" step="0.01" id="bo-kur">
+      <div class="kur-ipucu" id="bo-kur-ipucu"></div></div>
     <div class="alan"><label>Tutar (TL) <span style="color:var(--kirmizi)">*</span></label>
       <input type="number" step="0.01" id="bo-tutar" value="${h.kalan || ""}"></div>
     <div class="alan"><label>Teslim alan</label><input type="text" id="bo-teslim" value="${kacir(v.yon === "alacak" ? "" : v.karsi_taraf)}"></div>
     <div class="alan genis"><label>Açıklama</label><input type="text" id="bo-aciklama" placeholder="örn. kermes gelirinden, havale dekont no…"></div>`;
-  const yontemDegisti = () => { const y = $("bo-yontem").value;
+  const yontemDegisti = () => { const y = $("bo-yontem").value, dv = ["altin","usd","eur"].includes(y);
     $("bo-cins-alan").classList.toggle("gizli", y !== "altin");
-    $("bo-miktar-alan").classList.toggle("gizli", y !== "altin" && y !== "doviz");
-    $("bo-kur-alan").classList.toggle("gizli", y !== "altin" && y !== "doviz"); };
+    $("bo-miktar-alan").classList.toggle("gizli", !dv);
+    $("bo-kur-alan").classList.toggle("gizli", !dv); };
   const hesapla = () => { const m = Number($("bo-miktar").value), k = Number($("bo-kur").value); if (m && k) $("bo-tutar").value = (m * k).toFixed(2); };
-  $("bo-yontem").onchange = yontemDegisti; $("bo-miktar").oninput = hesapla; $("bo-kur").oninput = hesapla; yontemDegisti();
+  kurIpucuBagla("bo-yontem", "bo-cins", "bo-kur", "bo-kur-ipucu", hesapla, true);
+  $("bo-yontem").onchange = () => { yontemDegisti(); kurIpucuGuncelle("bo-yontem", "bo-cins", "bo-kur", "bo-kur-ipucu", hesapla, true); };
+  $("bo-miktar").oninput = hesapla; $("bo-kur").oninput = hesapla; yontemDegisti();
   $("form-kaydet").textContent = yazabilir ? "Kaydet" : "Talep Gönder";
   $("form-kaydet").onclick = async () => {
     const tarih = $("bo-tarih").value, odeyen = $("bo-odeyen").value.trim(), tutar = Number($("bo-tutar").value);
@@ -1207,8 +1248,8 @@ function borcOdemeFormu(b) {
     const y = $("bo-yontem").value, num = id => $(id).value !== "" ? Number($(id).value) : null;
     const veri = { tip:"odeme", borc_id: b.id, tarih, odeyen, yontem: y,
       altin_cinsi: y === "altin" ? $("bo-cins").value || null : null,
-      miktar: (y === "altin" || y === "doviz") ? num("bo-miktar") : null,
-      kur: (y === "altin" || y === "doviz") ? num("bo-kur") : null,
+      miktar: ["altin","usd","eur"].includes(y) ? num("bo-miktar") : null,
+      kur: ["altin","usd","eur"].includes(y) ? num("bo-kur") : null,
       tutar_tl: tutar, teslim_alan: $("bo-teslim").value.trim() || null, aciklama: $("bo-aciklama").value.trim() || null };
     const baslik = `${v.karsi_taraf} ← ${odeyen} ${paraYaz(tutar)} (${tarih})`;
     $("form-kaydet").textContent = "Kaydediliyor…";
@@ -1223,6 +1264,28 @@ function borcOdemeFormu(b) {
     borcAc(borcModul);
   };
   $("perde").classList.remove("gizli");
+}
+
+/* --- anlık kur ipucu: kalem/cins değişince kuru çek, göster, boşsa doldur --- */
+function kurIpucuGuncelle(kalemId, cinsId, kurId, ipucuId, hesapla, otomatikDoldur) {
+  const ip = $(ipucuId); if (!ip) return;
+  let kalem = $(kalemId).value; if (kalem === "doviz") kalem = "usd";   // ödeme formunda döviz → dolar varsayılan
+  const cins = $(cinsId)?.value;
+  if (!["altin","usd","eur"].includes(kalem)) { ip.innerHTML = ""; return; }
+  if (kalem === "altin" && !cins) { ip.innerHTML = `<span>Altın cinsini seçin, anlık kur gelsin.</span>`; return; }
+  ip.innerHTML = `<span>Anlık kur alınıyor…</span>`;
+  kurCek().then(() => {
+    const k = canliBirimKur(kalem, cins);
+    if (!k) { ip.innerHTML = `<span style="color:var(--kirmizi)">Anlık kur alınamadı, elle girin.</span>`; return; }
+    const ad = kalem === "altin" ? cins : kalem.toUpperCase();
+    ip.innerHTML = `<span>Anlık ${kacir(ad)} satış: <b>${paraYaz(k)}</b>${kurZamanYaz()}</span> <button type="button" class="btn kucuk ikincil" id="${ipucuId}-btn">Kullan</button>`;
+    $(`${ipucuId}-btn`).onclick = () => { $(kurId).value = k.toFixed(2); hesapla(); };
+    if (otomatikDoldur && !$(kurId).value) { $(kurId).value = k.toFixed(2); hesapla(); }
+  });
+}
+function kurIpucuBagla(kalemId, cinsId, kurId, ipucuId, hesapla, otomatikDoldur) {
+  const c = $(cinsId); if (c) c.onchange = () => kurIpucuGuncelle(kalemId, cinsId, kurId, ipucuId, hesapla, otomatikDoldur);
+  kurIpucuGuncelle(kalemId, cinsId, kurId, ipucuId, hesapla, otomatikDoldur);
 }
 
 async function borcSil(b) {

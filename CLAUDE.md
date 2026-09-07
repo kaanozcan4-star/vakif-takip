@@ -110,6 +110,7 @@ altin_cinsi, miktar, kur, tutar_tl, teslim_alan, aciklama.
 Durum hesaplanır (ödemelerden): Açık / Kısmi Ödendi / Kapandı / Vadesi geçti. Altın borçlarda kalan adet de gösterilir.
 Eski Excel'den gelen 4 Ümit Çelik çeki yeni yapıya taşındı; notlardaki ödemeler ayrı ödeme kaydı oldu.
 Kaynağı bilinmeyen ödemelerde odeyen = "Bilinmiyor (düzeltilecek)".
+**Anlık kur:** `kurCek()` → https://finans.truncgil.com/v4/today.json (ücretsiz, anahtarsız, CORS açık; 10 dk önbellek), yedek open.er-api.com (sadece USD/EUR). Satış fiyatı kullanılır. Form açılınca kur alanı boşsa otomatik dolar, "Kullan" ile güncellenir; listede açık altın/döviz kalanların bugünkü değeri gösterilir.
 
 ## Görsel Kimlik
 

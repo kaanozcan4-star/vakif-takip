@@ -70,6 +70,10 @@ Son güncelleme: 8 Eylül 2026
 - Özet: kalan borç, kalan alacak (altın olarak da), vadesi geçen; filtreler ve arama.
 - 4 Ümit Çelik çeki yeni yapıya taşındı, notlardaki ödemeler 8 ödeme kaydına çevrildi; Çek 4 notundan 162.000 ₺ alacak kaydı çıkarıldı.
 
+### 10. Anlık Kur (8 Eylül 2026) ✅
+- Borç ve ödeme formlarında altın cinsi / dolar / euro seçilince anlık satış kuru çekilir, TL karşılığı otomatik hesaplanır.
+- Listede ve özette açık altın/döviz kalanların bugünkü TL değeri görünür.
+
 ## KALAN VE DEVAM EDEN İŞLER
 
 1. ✅ Supabase projesi uyandırıldı (Resume project).
