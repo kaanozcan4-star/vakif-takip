@@ -80,10 +80,17 @@ Son güncelleme: 8 Eylül 2026
 - Giriş ekranında "Beni hatırla". E-posta zorunluluğu kalktı.
 - ⬜ `05_kullanici_yonetimi.sql` Supabase SQL Editor'da çalıştırılacak (kolonlar + fonksiyonlar, DDL olduğu için REST ile yapılamıyor).
 
+### 12. Yedek + Uyanık Tutma + Excel (8 Eylül 2026) ✅
+- GitHub Actions gece yedeği (şifreli, repoda), Supabase'i her gün uyandırır.
+- Site içi Yedek ekranı: son yedek tarihi, anında JSON/CSV indirme.
+- Her modülde ⬇ Excel düğmesi (kira ödemeleri, borç/alacak + ödemeler, genel modüller).
+- ⬜ GitHub secrets (`SUPABASE_SERVICE_KEY`, `YEDEK_PAROLA`) kullanıcı tarafından eklenecek; sonra Actions > Run workflow.
+
 ## KALAN VE DEVAM EDEN İŞLER
 
 1. ✅ Supabase projesi uyandırıldı (Resume project).
 2. ✅ Şifre SQL Editor üzerinden yenilendi.
+7. ⬜ **Yedek secrets:** GitHub > Settings > Secrets > `SUPABASE_SERVICE_KEY` + `YEDEK_PAROLA`, sonra Actions'ta ilk yedek.
 6. ⬜ **`05_kullanici_yonetimi.sql`** Supabase SQL Editor'da çalıştırılacak — Kullanıcılar ekranı onsuz çalışmaz.
 5. ✅ Kira modülü veritabanına kuruldu (7 Eylül 2026, REST üzerinden; `04_kira_modulu.sql` artık sadece yedek/yeniden kurulum için). ⬜ Kira tutarları panelden girilecek.
 3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.

@@ -229,6 +229,7 @@ td.sag,th.sag{text-align:right;white-space:nowrap}
       </div>
       <div class="arac">
         <input type="search" id="ara" placeholder="Kayıtlarda ara…">
+        <button class="btn ikincil gizli" id="disa-btn" title="Excel'de açılır (CSV)">⬇ Excel</button>
         <button class="btn" id="ekle-btn">+ Yeni Kayıt</button>
       </div>
     </div>
@@ -384,13 +385,14 @@ async function modulleriYukle() {
   }
   html += `<div class="menu-baslik">Genel</div><button data-id="talepler">Talepler</button>`;
   if (yonetici()) html += `<button data-id="yonetim">Modüller</button>`;
-  if (tamYetkili()) html += `<div class="menu-baslik">Yönetici</div><button data-id="kullanicilar">Kullanıcılar</button>`;
+  if (tamYetkili()) html += `<div class="menu-baslik">Yönetici</div><button data-id="kullanicilar">Kullanıcılar</button><button data-id="yedek">Yedek</button>`;
   $("menu").innerHTML = html;
 
   $("menu").querySelectorAll("button").forEach(b => {
     b.onclick = () => b.dataset.id === "talepler" ? talepleriAc()
                     : b.dataset.id === "yonetim"  ? yonetimAc()
                     : b.dataset.id === "kullanicilar" ? kullanicilarAc()
+                    : b.dataset.id === "yedek" ? yedekAc()
                     : modulSec(b.dataset.id);
   });
 
@@ -427,6 +429,8 @@ async function modulAc(id) {
   $("ekle-btn").textContent = yazabilir ? "+ Yeni Kayıt" : "+ Talep Oluştur";
   $("ekle-btn").classList.remove("gizli");
   $("ekle-btn").onclick = () => formAc(null);   // özel paneller bunu değiştirmiş olabilir
+  disaAktarAyarla(() => csvIndir(aktifModul.ad, alanlar.map(a => a.etiket).concat(["Kayıt Tarihi"]),
+    kayitlar.map(k => alanlar.map(a => a.tip === "evet_hayir" ? (k.veri[a.kod] ? "Evet" : "Hayır") : k.veri[a.kod]).concat([tarihYaz(k.olusturuldu)]))));
   ozetCiz();
   tabloCiz();
 }
@@ -585,7 +589,7 @@ async function kayitSil(id) {
 
 /* ---------------- TALEPLER ---------------- */
 async function talepleriAc() {
-  aktifModul = null;
+  aktifModul = null; disaAktarAyarla(null);
   menuIsaretle("talepler");
   $("modul-ad").textContent = "Talepler";
   $("modul-aciklama").textContent = "Yetkisi olmayan kullanıcıların açtığı kayıt talepleri";
@@ -659,6 +663,20 @@ async function talepKarar(talep, onay) {
 let kiraModul = null, kiraYerler = [], kiraOdemeler = [];
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const kacir = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// Dosya indir (tarayıcı "İndirilenler" klasörüne)
+function dosyaIndir(ad, icerik, tip) {
+  const url = URL.createObjectURL(new Blob([icerik], { type: tip }));
+  const a = document.createElement("a"); a.href = url; a.download = ad; document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 500);
+}
+// Türkçe Excel için: UTF-8 BOM + noktalı virgül ayraç
+function csvIndir(ad, basliklar, satirlar) {
+  const h = v => { if (v === null || v === undefined) return ""; if (typeof v === "number") return String(v).replace(".", ",");
+    const t = String(v); return /[;"\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const csv = [basliklar, ...satirlar].map(r => r.map(h).join(";")).join("\r\n");
+  dosyaIndir(`${ad}-${new Date().toISOString().slice(0,10)}.csv`, "\ufeff" + csv, "text/csv;charset=utf-8");
+}
+function disaAktarAyarla(fn) { const b = $("disa-btn"); if (!fn) { b.classList.add("gizli"); b.onclick = null; return; } b.classList.remove("gizli"); b.onclick = fn; }
 const donemYaz = d => { if (!d) return "—"; const [y, a] = d.split("-"); return `${AYLAR[Number(a)-1] || a} ${y}`; };
 const donemStr = t => `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`;
 const donemKaydir = (d, n) => { const [y, a] = d.split("-").map(Number); return donemStr(new Date(y, a-1+n, 1)); };
@@ -708,6 +726,9 @@ async function kiraAc(m) {
   $("ekle-btn").textContent = yazabilir ? "+ Ödeme Kaydet" : "+ Ödeme Talebi";
   $("ekle-btn").classList.remove("gizli");
   $("ekle-btn").onclick = () => kiraOdemeFormu(null, null);
+  disaAktarAyarla(() => { const yerAd = id => kiraYerler.find(y => y.id === id)?.veri.ad || "";
+    csvIndir("Kira-Odemeleri", ["Dönem","Dergah","Ödeme Tarihi","Tutar","Ödeyen","Kaydeden","Not"],
+      kiraOdemeler.map(o => [donemYaz(o.veri.donem), yerAd(o.veri.yer_id), tarihYaz(o.veri.tarih), o.veri.tutar, o.veri.odeyen, o.kullanicilar?.ad_soyad, o.veri.not_metni])); });
   kiraCiz();
 }
 
@@ -1022,6 +1043,12 @@ async function borcAc(m) {
   $("ekle-btn").textContent = yazabilir ? "+ Yeni Borç / Alacak" : "+ Talep Oluştur";
   $("ekle-btn").classList.remove("gizli");
   $("ekle-btn").onclick = () => borcFormu(null);
+  disaAktarAyarla(() => {
+    const satirlar = [];
+    borcListe.forEach(b => { const v = b.veri, h = borcHesap(b);
+      satirlar.push(["BORÇ/ALACAK", v.yon === "alacak" ? "Alacak" : "Borç", v.karsi_taraf, tarihYaz(v.tarih), neAlindi(v), v.miktar, v.kur, v.tutar_tl, h.odenen, h.kalan, h.durum, tarihYaz(v.vade_tarihi), v.alan_kisi, v.belge, v.aciklama, v.not_metni]);
+      h.od.forEach(o => satirlar.push(["  ödeme", "", v.karsi_taraf, tarihYaz(o.veri.tarih), neIle(o.veri), o.veri.miktar, o.veri.kur, o.veri.tutar_tl, "", "", "", "", o.veri.odeyen, o.veri.teslim_alan, o.veri.aciklama, o.kullanicilar?.ad_soyad])); });
+    csvIndir(borcModul.ad, ["Tür","Yön","Kişi/Kurum","Tarih","Ne","Miktar","Kur","Tutar TL","Ödenen","Kalan","Durum","Vade","Teslim Alan/Ödeyen","Belge/Teslim","Açıklama","Not/Kaydeden"], satirlar); });
   borcCiz();
 }
 
@@ -1336,7 +1363,7 @@ const kullaniciAdiUret = ad => ad.toLowerCase().trim()
 let kulListe = [], kulSifreler = {}, kulModuller = [];
 
 async function kullanicilarAc() {
-  aktifModul = null;
+  aktifModul = null; disaAktarAyarla(null);
   menuIsaretle("kullanicilar");
   $("modul-ad").textContent = "Kullanıcılar";
   $("modul-aciklama").textContent = "Hesap aç, görev ve yetki ver, şifre sıfırla";
@@ -1522,6 +1549,65 @@ function sifremiDegistir() {
   $("perde").classList.remove("gizli");
 }
 
+
+/* =====================================================================
+   YEDEK — otomatik yedek durumu (GitHub) + anında indirme
+   ===================================================================== */
+const YEDEK_HAM = "https://raw.githubusercontent.com/kaanozcan4-star/vakif-takip/main/yedek/SON_YEDEK.txt";
+const YEDEK_ACTIONS = "https://github.com/kaanozcan4-star/vakif-takip/actions/workflows/yedek.yml";
+async function yedekAc() {
+  aktifModul = null; disaAktarAyarla(null);
+  menuIsaretle("yedek");
+  $("modul-ad").textContent = "Yedek";
+  $("modul-aciklama").textContent = "Veriler her gece otomatik yedeklenir; istediğin an elle de indirebilirsin";
+  $("ozet").classList.add("gizli"); $("ara").classList.add("gizli"); $("ekle-btn").classList.add("gizli");
+  $("icerik").innerHTML = `<div class="yukleniyor">Yükleniyor…</div>`;
+  let durum = "", sinif = "acik";
+  try {
+    const r = await fetch(YEDEK_HAM + "?t=" + Date.now(), { cache: "no-store" });
+    if (r.ok) {
+      const metin = (await r.text()).trim(); const [gun, ...satirlar] = metin.split("\n");
+      const fark = Math.round((new Date() - new Date(gun)) / 86400000);
+      sinif = fark <= 1 ? "kapali" : fark <= 3 ? "kismi" : "acik";
+      durum = `<b>Son otomatik yedek: ${tarihYaz(gun)}</b> (${fark === 0 ? "bugün" : fark + " gün önce"})
+        <div style="font-size:12px;color:var(--soluk);margin-top:6px">${satirlar.map(kacir).join(" · ")}</div>`;
+    } else durum = "<b>Henüz otomatik yedek alınmamış.</b> Kurulum için aşağıdaki adımlar.";
+  } catch (e) { durum = "<b>Yedek durumu okunamadı.</b>"; }
+  $("icerik").innerHTML = `
+    <div class="kira-kart ${sinif === "kapali" ? "odendi" : sinif === "kismi" ? "uyari" : "gecikti"}" style="max-width:720px;margin-bottom:18px">
+      <h3>Otomatik gece yedeği</h3>
+      <div>${durum}</div>
+      <div class="kira-son">Her gece 04:00'te GitHub, veritabanının tamamını şifreli olarak <code>yedek/</code> klasörüne yazar.
+        Günlük yedekler 90 gün, her ayın 1'i kalıcı saklanır. Aynı istek Supabase'i uyanık tutar.
+        <a href="${YEDEK_ACTIONS}" target="_blank" rel="noopener">Yedek geçmişini GitHub'da gör</a></div>
+    </div>
+    <div class="kira-kart" style="max-width:720px;margin-bottom:18px">
+      <h3>Şimdi yedek indir</h3>
+      <div style="font-size:13px;color:var(--soluk)">Görebildiğin bütün veriyi tek dosyada bilgisayarına indirir (JSON). Toplantı öncesi, büyük değişiklik öncesi al.</div>
+      <div class="islem"><button class="btn" id="yedek-indir">⬇ Tüm veriyi indir (JSON)</button>
+        <button class="btn ikincil" id="yedek-csv">⬇ Tüm kayıtlar (Excel)</button></div>
+    </div>
+    <div class="kira-kart" style="max-width:720px">
+      <h3>Kurulum (bir kez)</h3>
+      <div style="font-size:13px;line-height:1.6">
+        GitHub'da iki gizli anahtar tanımlanmalı: <b>SUPABASE_SERVICE_KEY</b> ve <b>YEDEK_PAROLA</b>.
+        Adımlar <code>yedek/README.md</code> dosyasında. Parolayı bir yere yaz, yedeği açmak için gerekir.</div>
+    </div>`;
+  $("yedek-indir").onclick = async () => {
+    const b = $("yedek-indir"); b.textContent = "Hazırlanıyor…";
+    const tablolar = ["kullanicilar","moduller","modul_alanlari","kayitlar","modul_izinleri","talepler","gunluk","kullanici_sifreleri"];
+    const y = { olusturuldu: new Date().toISOString(), alan: ben.ad_soyad, tablolar: {} };
+    for (const t of tablolar) { const { data } = await sb.from(t).select("*").limit(10000); if (data) y.tablolar[t] = data; }
+    dosyaIndir(`vakif-yedek-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(y, null, 1), "application/json");
+    b.textContent = "⬇ Tüm veriyi indir (JSON)";
+  };
+  $("yedek-csv").onclick = async () => {
+    const { data } = await sb.from("kayitlar").select("*, moduller(ad)").limit(10000);
+    csvIndir("Tum-Kayitlar", ["Modül","Kol","Başlık","Kayıt Tarihi","Veri"],
+      (data || []).map(k => [k.moduller?.ad, KOL_AD[k.kol], k.baslik, tarihYaz(k.olusturuldu), JSON.stringify(k.veri)]));
+  };
+}
+
 /* =====================================================================
    YÖNETİM PANELİ — kullanıcılar, yetkiler, modüller
    ===================================================================== */
@@ -1546,7 +1632,7 @@ function sifreUret() {
 }
 
 async function yonetimAc() {
-  aktifModul = null;
+  aktifModul = null; disaAktarAyarla(null);
   menuIsaretle("yonetim");
   $("modul-ad").textContent = "Modüller";
   $("modul-aciklama").textContent = "Modül ekle, aç / kapat. Kullanıcılar için soldaki Kullanıcılar ekranı.";

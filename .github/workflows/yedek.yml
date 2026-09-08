@@ -1,0 +1,56 @@
+name: Günlük yedek
+
+# Her gece 04:00 (Türkiye) — veritabanının tamamını şifreli olarak yedek/ klasörüne yazar.
+# Aynı zamanda Supabase'e her gün istek gittiği için ücretsiz proje uykuya geçmez.
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: yedek
+  cancel-in-progress: false
+
+jobs:
+  yedek:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verileri Supabase'den çek
+        env:
+          SUPABASE_URL: https://zfujfdzhymlrighxhebl.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 yedek/yedek_al.py /tmp/yedek.json
+
+      - name: Şifrele ve kaydet
+        env:
+          YEDEK_PAROLA: ${{ secrets.YEDEK_PAROLA }}
+        run: |
+          set -e
+          if [ -z "$YEDEK_PAROLA" ]; then echo "HATA: YEDEK_PAROLA secret'ı tanımlı değil."; exit 1; fi
+          GUN=$(TZ=Europe/Istanbul date +%F)
+          mkdir -p yedek/gunluk
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in /tmp/yedek.json -out "yedek/gunluk/vakif-$GUN.json.enc" -pass env:YEDEK_PAROLA
+          cp "yedek/gunluk/vakif-$GUN.json.enc" yedek/son.json.enc
+          # Son 90 günlük dosya kalsın, eskiler silinsin (ayın 1'i olanlar hep kalır)
+          for f in $(ls yedek/gunluk/vakif-*.json.enc | sort | head -n -90); do
+            case "$f" in *-01.json.enc) ;; *) rm -f "$f";; esac
+          done
+          echo "$GUN" > yedek/SON_YEDEK.txt
+          python3 - <<'EOF' >> yedek/SON_YEDEK.txt
+          import json; d=json.load(open('/tmp/yedek.json'))
+          for t,v in d['tablolar'].items(): print(f"{t}: {len(v)}")
+          EOF
+          cat yedek/SON_YEDEK.txt
+
+      - name: Repoya yaz
+        run: |
+          git config user.name "vakif-yedek-bot"
+          git config user.email "yedek@vakif.local"
+          git add yedek
+          git commit -m "Yedek $(TZ=Europe/Istanbul date +%F)" || { echo "Değişiklik yok"; exit 0; }
+          git push

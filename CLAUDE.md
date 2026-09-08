@@ -126,6 +126,20 @@ Menüde en altta **Kullanıcılar** (sadece erkek Başkan/Müdür = `tamYetkili(
 - "Beni hatırla": işaretliyse oturum localStorage'da kalıcı, değilse sessionStorage (tarayıcı kapanınca biter).
 - Eski "Yönetim" ekranı artık sadece **Modüller**; Yetkiler düğmesi Kullanıcılar ekranında.
 
+## Yedek ve Uyanık Tutma (8 Eylül 2026)
+
+- `.github/workflows/yedek.yml`: her gece 01:00 UTC (04:00 TR) `yedek/yedek_al.py` ile tüm tabloları + auth
+  kullanıcı listesini JSON'a çeker, `openssl aes-256-cbc -pbkdf2` ile `YEDEK_PAROLA` secret'ıyla şifreler,
+  `yedek/gunluk/vakif-YYYY-MM-DD.json.enc` ve `yedek/son.json.enc` olarak commit'ler. 90 gün + ayın 1'i kalıcı.
+  `yedek/SON_YEDEK.txt` şifresiz özet; sitedeki **Yedek** ekranı bunu raw.githubusercontent'ten okur.
+- Gerekli GitHub secrets: `SUPABASE_SERVICE_KEY` (service_role), `YEDEK_PAROLA`. Kullanıcı ekleyecek.
+- Bu günlük istek Supabase'i uyanık tutar (7 gün kuralı) ve commit repo'yu aktif tutar (GitHub 60 gün
+  hareketsizlikte cron'u kapatır).
+- Geri yükleme: `yedek/geri_yukle.py` (service key ile, tablolar upsert, auth hesapları e-postaya göre eşlenir/açılır).
+- Site içi: **Yedek** menüsü (tam yetkili) → JSON indir, tüm kayıtlar CSV; her modülde **⬇ Excel** düğmesi
+  (`csvIndir`, BOM + noktalı virgül).
+- Supabase ücretsiz katmanda otomatik yedek YOK; bu mekanizma tek yedek.
+
 ## Görsel Kimlik
 
 - Marka rengi: **#4BBFC2** (Semerkand logosundan piksel olarak ölçüldü)
