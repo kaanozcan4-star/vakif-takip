@@ -140,6 +140,15 @@ Menüde en altta **Kullanıcılar** (sadece erkek Başkan/Müdür = `tamYetkili(
   (`csvIndir`, BOM + noktalı virgül).
 - Supabase ücretsiz katmanda otomatik yedek YOK; bu mekanizma tek yedek.
 
+## Durum (13 Eylül 2026)
+
+- Canlı: https://kaanozcan4-star.github.io/vakif-takip/ (GitHub Pages, `main`). Yerel: `node server.js` → :3000 (artık gerekmiyor).
+- Giriş: Müdür `kaan.ozcan@hotmail.com` (kullanıcı adı `kaan.ozcan`, 05 SQL sonrası). İkinci Müdür kaydı "Yönetici" (eski hesap).
+- Veritabanında hazır: kira modülü (5 dergah, tutarlar, 60 geçmiş ödeme), borç/alacak (4 çek + 8 ödeme + 1 alacak).
+- **Bekleyen (kullanıcı):** `05_kullanici_yonetimi.sql` çalıştırılmadı → Kullanıcılar ekranı "veritabanı hazırlığı yapılmamış" der, kullanıcı adıyla giriş e-postaya düşer (e-postayla giriş çalışır). GitHub secrets eklenmedi → gece yedeği hiç çalışmadı.
+- Claude nasıl çalışıyor: veri değişikliklerini kullanıcının oturumuyla REST üzerinden doğrudan uyguluyor (tam_yetkili RLS); DDL (kolon/fonksiyon) için SQL dosyası yazıp kullanıcıya tıklama adımı veriyor.
+- Kullanıcı teknik değil ve çoğunlukla telefondan yazıyor; adımları tek tek, kısa ver.
+
 ## Görsel Kimlik
 
 - Marka rengi: **#4BBFC2** (Semerkand logosundan piksel olarak ölçüldü)

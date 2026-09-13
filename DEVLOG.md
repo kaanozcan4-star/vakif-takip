@@ -1,6 +1,6 @@
 # DEVLOG — Semerkand Kurtköy Vakfı Takip Sistemi
 
-Son güncelleme: 8 Eylül 2026
+Son güncelleme: 13 Eylül 2026
 
 ---
 
@@ -86,12 +86,14 @@ Son güncelleme: 8 Eylül 2026
 - Her modülde ⬇ Excel düğmesi (kira ödemeleri, borç/alacak + ödemeler, genel modüller).
 - ⬜ GitHub secrets (`SUPABASE_SERVICE_KEY`, `YEDEK_PAROLA`) kullanıcı tarafından eklenecek; sonra Actions > Run workflow.
 
-## KALAN VE DEVAM EDEN İŞLER
+## KALAN VE DEVAM EDEN İŞLER (13 Eylül 2026)
 
-1. ✅ Supabase projesi uyandırıldı (Resume project).
-2. ✅ Şifre SQL Editor üzerinden yenilendi.
-7. ⬜ **Yedek secrets:** GitHub > Settings > Secrets > `SUPABASE_SERVICE_KEY` + `YEDEK_PAROLA`, sonra Actions'ta ilk yedek.
-6. ⬜ **`05_kullanici_yonetimi.sql`** Supabase SQL Editor'da çalıştırılacak — Kullanıcılar ekranı onsuz çalışmaz.
-5. ✅ Kira modülü veritabanına kuruldu (7 Eylül 2026, REST üzerinden; `04_kira_modulu.sql` artık sadece yedek/yeniden kurulum için). ⬜ Kira tutarları panelden girilecek.
-3. ✅ **Projeyi GitHub'a Taşımak:** `main` dalı `https://github.com/kaanozcan4-star/vakif-takip` adresine yüklendi.
-4. ✅ **Canlı yayın (GitHub Pages):** https://kaanozcan4-star.github.io/vakif-takip/ — `main` dalına her push 1 dk içinde yayına girer. Netlify'a gerek kalmadı.
+**Kullanıcının yapması gerekenler (Claude uzaktan yapamıyor):**
+1. ⬜ **`05_kullanici_yonetimi.sql`** → Supabase > SQL Editor > New query > yapıştır > Run. Kullanıcılar ekranı, kullanıcı adıyla giriş ve şifre sıfırlama onsuz çalışmaz. (13 Eylül itibarıyla çalıştırılmadı; `kullanicilar.kullanici_adi` kolonu yok.)
+2. ⬜ **Yedek secrets** → GitHub > Settings > Secrets and variables > Actions: `SUPABASE_SERVICE_KEY` (Supabase > Project Settings > API Keys > service_role) + `YEDEK_PAROLA` (kendi parolan, bir yere yaz). Sonra Actions > "Günlük yedek" > Run workflow. (13 Eylül itibarıyla `yedek/SON_YEDEK.txt` yok → hiç yedek alınmadı.)
+3. ⬜ Eylül 2026 kira ödemeleri girilecek (kartlar kırmızı "gecikti" gösteriyor).
+4. ⬜ Çek 1 (300.000 ₺) ve Çek 2 (960.000 ₺) ödemelerinde "Bilinmiyor (düzeltilecek)" — kim ödedi, düzeltilecek. 162.000 ₺ Ümit Çelik alacağı doğrulanacak.
+
+**Öneriler (istenirse Claude yapar):** ana sayfa özet ekranı · Supabase'i Frankfurt'a taşıma (yedek sistemi kurulduktan sonra) · işlem günlüğü ekranı · kira hatırlatması (e-posta/Telegram) · PWA · alan adı.
+
+**Tamamlananlar:** Supabase uyandırıldı ve şifre yenilendi · GitHub'a taşındı · GitHub Pages canlı (https://kaanozcan4-star.github.io/vakif-takip/) · Kira Takip (5 dergah, tutarlar, 12 ay geçmiş) · Borç/Alacak defteri (altın/döviz/çek, anlık kur, geri ödemeler) · Kullanıcı yönetimi kodu · Gece yedeği altyapısı · Excel dışa aktarım · Bozuk Türkçe karakterler düzeltildi.
